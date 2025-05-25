@@ -25,7 +25,10 @@ Over the time, I realized that I am not using this button very often. The Corax5
 
 ## Firmware
 
-Natively supports [ZMK](https://zmk.dev/). The firmware for the Corax56 and Corax54 can be found in the submodule and is available here: https://github.com/dnlbauer/corax-zmk-config
+Natively supports [ZMK](https://zmk.dev/). 
+A ZMK module that supports both the Corax56 and Corax54 can be found [here](https://github.com/dnlbauer/zmk-keyboards-corax).
+
+My personal firmware build is available at [https://github.com/dnlbauer/corax-zmk-config](https://github.com/dnlbauer/corax-zmk-config).
 
 ## Build guide
 
