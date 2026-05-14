@@ -94,17 +94,21 @@ split keebs:
 
 1. **Power first.** Route `VCC` and `BAT+` from the slider switch /
    battery pads to the Nice!Nano. Wide trace (0.4 mm+).
-2. **Ground last via a pour.** Don't hand-route most ground connections;
-   leave them for a copper fill at the end.
-3. **Matrix rows next.** Each `colN` net runs down a column from key to
+2. **Matrix rows next.** Each `colN` net runs down a column from key to
    key — easy, nearly straight runs.
-4. **Matrix columns.** Each `rowN` net runs across all keys in a row.
+3. **Matrix columns.** Each `rowN` net runs across all keys in a row.
    These are trickier because they cross the column traces; use the
    opposite layer or hop over with a via.
-5. **MCU + display + scrollwheel signals last.** They are the most
+4. **MCU + display + scrollwheel signals last.** They are the most
    constrained but also the fewest nets.
-6. **GND copper pour** on both F.Cu and B.Cu (`Edit → Add Filled Zone`,
-   tied to `GND`). Re-run DRC.
+
+**You do not need to route GND.** The scaffold ships with two filled
+zones (one on F.Cu, one on B.Cu) tied to the GND net that cover the
+whole board outline. Every GND pad on the board ties into the pour
+automatically. If you want to see the fill while routing, hit `B` in
+pcbnew to refill zones; `Ctrl+B` un-fills them so you can see traces
+beneath. Gerber export refills them too via `--check-zones`, so the
+filled-or-not state of the saved file doesn't affect what gets fabbed.
 
 KiCad's interactive router (default `X` shortcut) handles most of this.
 "Walk around" mode is usually the right choice for hand routing; "Shove"

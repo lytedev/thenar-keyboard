@@ -28,16 +28,27 @@
           scaffold = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-scaffold";
             src = ./thenar;
-            nativeBuildInputs = [ pkgs.ergogen pkgs.python313 ];
+            nativeBuildInputs = [ pkgs.ergogen pkgs.python313 pkgs.kicad kicadPython ];
             buildPhase = ''
               runHook preBuild
+              # KiCad's wxWidgets-based config loader needs a writable HOME.
+              export HOME=$(mktemp -d)
               mkdir -p $out
               ergogen ./ergogen -o $out
+              # Ergogen emits KiCad 5.1 format. Upgrade to current format
+              # first - pcbnew Python segfaults if you save a board twice in
+              # one process (which is what migrate-then-modify would need).
+              kicad-cli pcb upgrade $out/pcbs/keyboard.kicad_pcb
+              kicad-cli pcb upgrade $out/pcbs/switchplate.kicad_pcb
               # Only the keyboard PCB gets a project file - the switchplate is
               # an outline-only board (never hand-routed) and a sibling
               # switchplate.kicad_pro in the same directory would conflict with
               # keyboard.kicad_pro in KiCad's launcher.
               python3 ./scripts/write_kicad_pro.py $out/pcbs/keyboard.kicad_pcb
+              # Add F.Cu + B.Cu GND zones so the user does not have to route
+              # ground returns. Zones are added unfilled - gerber export passes
+              # --check-zones to fill them at the time of fabrication output.
+              kicad-python ./scripts/patch_keyboard_pcb.py $out/pcbs/keyboard.kicad_pcb
               runHook postBuild
             '';
             dontInstall = true;
@@ -57,6 +68,7 @@
               mkdir -p $out
               kicad-cli pcb export gerbers \
                 --subtract-soldermask \
+                --check-zones \
                 -l "F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts" \
                 ${routedKeyboard} -o $out
               kicad-cli pcb export drill \
