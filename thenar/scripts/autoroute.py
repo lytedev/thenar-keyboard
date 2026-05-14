@@ -3,47 +3,37 @@
 
 Pipeline:
 
-    LoadBoard(input)
-        |
-    [strip footprints that crash DSN export]
-        |
-    ExportSpecctraDSN -> board.dsn
-        |
-    freerouting -de board.dsn -do board.ses -mp <passes>
-        |
-    LoadBoard(input) again (fresh, unstripped)
-        |
-    ImportSpecctraSES(board, board.ses)
-        |
-    SaveBoard(output)
+    1. (kicad-python) export-dsn  : LoadBoard, strip text/battery
+                                    footprints, ExportSpecctraDSN, strip
+                                    (plane GND ...) blocks from the DSN.
+    2. (freerouting)              : run -de <dsn> -do <ses> -mp <passes>.
+    3. (kicad-python) import-ses  : LoadBoard (original, unstripped),
+                                    ImportSpecctraSES, SaveBoard.
 
-Why the strip step:
+The script invokes itself for phases 1 and 3 in subprocesses so each
+pcbnew interaction gets a fresh interpreter — calling LoadBoard,
+ExportSpecctraDSN, then later LoadBoard, ImportSpecctraSES, SaveBoard
+in a single process consistently segfaults inside KiCad 10's swig
+bindings.
 
-KiCad's Specctra DSN exporter silently returns False on certain
-ergogen-generated footprints. Two known offenders in this project:
+Why strip footprints + planes:
 
-  - text.js  emits a "footprint" with zero pads (just silkscreen text).
-    DSN export bails when it walks the footprint and finds no pads to
-    enumerate.
-  - battery.js uses the module name `lib:niceview_headers` (a copy-paste
-    leftover from when it was forked off the niceview footprint). DSN
-    appears to choke on this; renaming the module or switching footprint
-    fixes it.
-
-Rather than mutate the design, we strip these footprints from a working
-copy of the board for the DSN trip only. Freerouting routes the rest,
-and SES import only adds copper traces — the text/battery footprints
-in the original board are unaffected.
+  - text.js emits a "footprint" with zero pads. DSN export aborts on it.
+  - battery.js reuses the module name `lib:niceview_headers` (a copy-
+    paste leftover). DSN export aborts on that too.
+  - GND filled zones get exported as Specctra `(plane GND ...)`, which
+    freerouting treats as solid copper that blocks routing. Removing
+    those declarations from the DSN frees up the board. The original
+    .kicad_pcb (reloaded for SES import) still has the zones intact,
+    and gerber export's --check-zones makes the fill flow around any
+    GND traces freerouting laid down.
 
 Usage:
     autoroute.py <input.kicad_pcb> <output.kicad_pcb> [<passes>]
+    autoroute.py --export-dsn <input.kicad_pcb> <out.dsn>
+    autoroute.py --import-ses <input.kicad_pcb> <in.ses> <output.kicad_pcb>
 
-Defaults to 50 passes. More passes = cleaner routing at higher cost.
-10-30 is fast and ugly, 50-100 is reasonable for a keyboard, 200+ has
-diminishing returns.
-
-Must be run with KiCad's `pcbnew` Python module on PYTHONPATH and the
-`freerouting` binary on PATH.
+The two `--` forms are subprocess entry points; humans use the first.
 """
 
 from __future__ import annotations
@@ -53,8 +43,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pcbnew
-
 
 # Module names (FPID library item name) that crash DSN export.
 DSN_BLOCKLIST = {
@@ -63,49 +51,96 @@ DSN_BLOCKLIST = {
 }
 
 
-def strip_dsn_breakers(board: "pcbnew.BOARD") -> int:
-    removed = 0
+# ---- Phase 1: DSN export (runs in subprocess for pcbnew isolation)
+
+def export_dsn_main(input_pcb: str, dsn_out: str) -> int:
+    import pcbnew
+    board = pcbnew.LoadBoard(input_pcb)
+    stripped = 0
     for fp in list(board.GetFootprints()):
         fpid = fp.GetFPID()
-        full_name = f"{fpid.GetLibNickname()}:{fpid.GetLibItemName()}"
         item_name = str(fpid.GetLibItemName())
-        if full_name in DSN_BLOCKLIST or f"lib:{item_name}" in DSN_BLOCKLIST:
+        if f"lib:{item_name}" in DSN_BLOCKLIST:
             board.Remove(fp)
-            removed += 1
+            stripped += 1
+    print(f"[autoroute] stripped {stripped} DSN-incompatible footprints",
+          flush=True)
+    if not pcbnew.ExportSpecctraDSN(board, dsn_out):
+        print("error: DSN export failed", file=sys.stderr)
+        return 1
+    return 0
+
+
+# ---- Phase 3: SES import (runs in subprocess for pcbnew isolation)
+
+def import_ses_main(input_pcb: str, ses_in: str, output_pcb: str) -> int:
+    import pcbnew
+    board = pcbnew.LoadBoard(input_pcb)
+    if not pcbnew.ImportSpecctraSES(board, ses_in):
+        print("error: SES import failed", file=sys.stderr)
+        return 1
+    pcbnew.SaveBoard(output_pcb, board)
+    return 0
+
+
+# ---- DSN text post-processing (no pcbnew, runs in main process)
+
+def strip_planes(dsn_path: Path) -> int:
+    """Delete `(plane <netname> ...)` blocks from a Specctra DSN file."""
+    text = dsn_path.read_text()
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    removed = 0
+    while i < n:
+        idx = text.find("(plane", i)
+        if idx == -1:
+            out.append(text[i:])
+            break
+        out.append(text[i:idx])
+        depth = 1
+        j = idx + len("(plane")
+        while j < n and depth > 0:
+            if text[j] == "(":
+                depth += 1
+            elif text[j] == ")":
+                depth -= 1
+            j += 1
+        removed += 1
+        i = j
+    dsn_path.write_text("".join(out))
     return removed
 
 
-def main() -> int:
-    if len(sys.argv) not in (3, 4):
-        print(__doc__, file=sys.stderr)
-        return 2
+# ---- Orchestration
 
-    input_pcb = Path(sys.argv[1])
-    output_pcb = Path(sys.argv[2])
-    passes = int(sys.argv[3]) if len(sys.argv) == 4 else 50
-
+def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
     if not input_pcb.is_file():
         print(f"error: not a file: {input_pcb}", file=sys.stderr)
         return 1
     output_pcb.parent.mkdir(parents=True, exist_ok=True)
 
+    me = Path(__file__).resolve()
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         dsn = tmp / "board.dsn"
         ses = tmp / "board.ses"
 
-        # Pass 1: strip DSN-incompatible footprints, export DSN.
-        board = pcbnew.LoadBoard(str(input_pcb))
-        stripped = strip_dsn_breakers(board)
-        print(f"[autoroute] stripped {stripped} DSN-incompatible footprints", flush=True)
-
-        if not pcbnew.ExportSpecctraDSN(board, str(dsn)):
-            print("error: DSN export failed even after stripping known offenders.",
-                  file=sys.stderr)
+        # Phase 1: DSN export (subprocess).
+        print(f"[autoroute] exporting DSN ...", flush=True)
+        result = subprocess.run(
+            [sys.executable, str(me), "--export-dsn", str(input_pcb), str(dsn)],
+        )
+        if result.returncode != 0 or not dsn.is_file():
+            print("error: DSN export phase failed", file=sys.stderr)
             return 1
         print(f"[autoroute] DSN -> {dsn} ({dsn.stat().st_size} bytes)", flush=True)
 
-        # Pass 2: run freerouting.
+        removed_planes = strip_planes(dsn)
+        print(f"[autoroute] stripped {removed_planes} plane declarations",
+              flush=True)
+
+        # Phase 2: freerouting.
         print(f"[autoroute] running freerouting ({passes} passes) ...", flush=True)
         subprocess.run(
             ["freerouting", "-de", str(dsn), "-do", str(ses), "-mp", str(passes)],
@@ -116,15 +151,33 @@ def main() -> int:
             return 1
         print(f"[autoroute] SES -> {ses} ({ses.stat().st_size} bytes)", flush=True)
 
-        # Pass 3: re-load original board (still has text + battery), import SES.
-        board2 = pcbnew.LoadBoard(str(input_pcb))
-        if not pcbnew.ImportSpecctraSES(board2, str(ses)):
-            print("error: SES import failed", file=sys.stderr)
+        # Phase 3: SES import (subprocess).
+        print(f"[autoroute] importing SES ...", flush=True)
+        result = subprocess.run(
+            [sys.executable, str(me), "--import-ses",
+             str(input_pcb), str(ses), str(output_pcb)],
+        )
+        if result.returncode != 0 or not output_pcb.is_file():
+            print("error: SES import phase failed", file=sys.stderr)
             return 1
-        pcbnew.SaveBoard(str(output_pcb), board2)
         print(f"[autoroute] saved {output_pcb}", flush=True)
 
     return 0
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if args and args[0] == "--export-dsn" and len(args) == 3:
+        return export_dsn_main(args[1], args[2])
+    if args and args[0] == "--import-ses" and len(args) == 4:
+        return import_ses_main(args[1], args[2], args[3])
+    if len(args) in (2, 3):
+        input_pcb = Path(args[0])
+        output_pcb = Path(args[1])
+        passes = int(args[2]) if len(args) == 3 else 50
+        return orchestrate(input_pcb, output_pcb, passes)
+    print(__doc__, file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":
