@@ -1,223 +1,181 @@
 # Build Guide
 
-TODO: Replace this draft with a verified, photographed walkthrough. The text
-below is a best-guess procedure derived from the design itself (reversible
-PCB, choc hotswap, Nice!Nano + Nice!View, EVQWGD001 scrollwheel) and from
-standard ZMK wireless split practice. It should work, but nothing here has
-been built and tested yet.
+> **⚠️ This guide is LLM-generated and has not been verified by an actual
+> build.** It was produced by Claude by adapting the upstream
+> [corax build guide](https://github.com/dnlbauer/corax-keyboard/blob/main/docs/BuildGuide.md) —
+> rewording the prose, updating counts (54 → 56 keys, 28 hotswaps + 29
+> diodes per side), and replacing the upstream's image-per-step photos
+> with text descriptions. The procedural content is paraphrased from the
+> upstream guide rather than independently verified. Treat it as a
+> starting point; expect to cross-reference the upstream guide and other
+> ZMK split builds, and submit corrections after your first build.
+>
+> TODO: Replace prose with photos at each step. Sections for the Nice!View
+> display and the 3D-printed case are still unwritten — the upstream guide
+> left them as TODOs too.
 
-Topics still owed:
-- Ordering PCBs (gerber location, recommended JLCPCB settings)
-- BOM walkthrough (see `thenar/README.md`)
-- Diode + hotswap socket placement (note the new num-row key on the outer
-  column versus the upstream corax54)
-- Nice!Nano + Nice!View headers
-- Battery, slider switch, reset button
-- Switchplate + 3D-printed case assembly
-- Firmware flashing (link the thenar ZMK config repo once it exists)
+Thenar's assembly is mechanically identical to the corax — same reversible
+PCB, same MCU/scrollwheel/display layout — it just has one extra switch
+position per half on the outermost column.
 
 ---
 
-# Draft build guide (untested)
+## Disclaimer
 
-## 0. Tools
+This guide is written from the perspective of someone who has already built
+some keyboards. It is probably not very beginner-friendly. There are many
+tricks and techniques for soldering and assembling keyboards that are not
+covered in detail. If this is your first build, I strongly recommend reading
+one or two more comprehensive guides on other keyboards first. A great one
+to start with is the Sofle guide:
+<https://josefadamcik.github.io/SofleKeyboard/build_guide_choc.html>
 
-- Fine-tip soldering iron (~300–320 °C for leaded, ~340–360 °C for lead-free)
-- Solder (0.5–0.8 mm, leaded if you can get it)
-- Flux pen
-- Tweezers (curved + straight)
-- Flush cutters
-- Multimeter (continuity + diode mode)
-- Small Phillips screwdriver (M2)
-- Optional but recommended: PCB holder / helping hands, isopropyl alcohol +
-  brush for cleaning flux
+## Ordering PCBs
 
-## 1. Order the PCBs
-
-Gerbers are produced by the flake:
+Build the gerber zip from the flake:
 
 ```sh
 nix build .#gerbers-zip
 ```
 
-The result symlink contains `thenar-gerbers.zip`. Upload it to your fab of
-choice. Recommended JLCPCB settings (carried over from the upstream corax):
+`result/thenar-gerbers.zip` is the file you upload to your PCB fab. I
+recommend [JLCPCB](https://jlcpcb.com/) with these settings:
 
-| Setting                 | Value               |
+|                         |                     |
 |-------------------------|---------------------|
 | Layers                  | 2                   |
 | PCB Thickness           | 1.6 mm              |
 | Surface Finish          | LeadFree HASL       |
 | Via Covering            | Tented              |
-| Board Outline Tolerance | ±0.2 mm (Regular)   |
+| Board Outline Tolerance | +/- 0.2 mm (Regular)|
 
-Order 2 boards (or 5 — minimum lot is usually 5; spares are nice).
+## Building the keyboard
 
-The PCB is **reversible** — the same board is used for both halves, just
-flipped. There is no left/right designator on the gerbers; you orient it
-during assembly.
+You need two PCBs — one for each hand. The PCB is reversible, so the same
+board is used for both halves; the side you treat as the front determines
+which hand the half becomes.
 
-## 2. Identify front vs. back of each PCB
+If this guide says "front side" and you are building the left half, you
+work on the side that has **"Left Hand Front"** silkscreened on it. The
+side with "Right Hand Front" is then the back side for that half. The
+right half is the opposite: "Right Hand Front" is its front, "Left Hand
+Front" is its back.
 
-On each board, one side has the silkscreen text **"Left Hand Front"**, the
-other has **"Right Hand Front"**. Pick one PCB to be the left half and one
-to be the right half, then mark the front side of each with a piece of
-tape so you don't lose track. Every component on a reversible PCB is
-mounted with **the front facing you**.
+A good strategy is to mark the intended front side of each half with a
+piece of tape or a post-it before you start. Check before every step that
+you are working on the correct side.
 
-## 3. Solder diodes
+### Jumpers
 
-There is one 1N4148W SMD diode per switch (56) plus one for the scrollwheel
-(57). The 58th in the BOM is a spare.
+There are 12 jumpers on each side of the board, in three groups (MCU,
+display, scrollwheel). They make the MCU/display/encoder footprints
+reusable between the two halves by letting you pick which side connects
+each net.
 
-For each switch position there are two diode pads on the PCB — **one on the
-front and one on the back**. You use only the pad on the side that matches
-the front of the half you are currently building.
+**Solder the jumpers ONLY on the back side of the PCB.** That is: when
+building the left half (front labelled "Left Hand Front"), solder the
+jumpers on the "Right Hand Front" side. This is critical — soldering on
+the wrong side will not work, and on the MCU jumpers in particular it
+can short pins together and destroy the Nice!Nano on power-up.
 
-1. Orient the PCB front-side up.
-2. For each switch location, identify the diode pad on this side.
-3. Diodes are polarised: the cathode (line) goes toward the row net. The
-   silkscreen has a matching line — align them.
-4. Tin one pad with a small dot of solder. Place the diode with tweezers,
-   reflow that pad to anchor it, then solder the second pad. Move on.
-5. Repeat for the scrollwheel diode.
+Bridge each jumper with a small blob of solder across the two pads.
 
-After all diodes on this half are placed, run a multimeter in diode mode
-across each one to confirm polarity (~0.6 V drop in one direction, OL in
-the other).
+### MCU sockets
 
-## 4. Solder Kailh Choc hotswap sockets
-
-28 PG1350 hotswap sockets per half. Same drill as diodes:
-
-1. Hotswaps go on the **back** of each half (i.e. the side opposite the
-   "Front" silkscreen for that half).
-2. Tin one of the two pads on the footprint.
-3. Place the socket, reflow to anchor, then solder the second pad. The
-   socket has a small notch — match it to the silkscreen outline.
-4. Push the socket flush to the PCB while reflowing the first pad; gaps
-   here cause keys to sit at different heights.
-
-## 5. Solder the scrollwheel (EVQWGD001)
-
-The scrollwheel footprint has jumpers that select rotation direction. On
-this PCB they are pre-defined in ergogen, but each half still needs the
-three jumpers on its **own front side** bridged:
-
-- `ENCB` jumper (top)
-- `GND` jumper (middle)
-- `ENCA` jumper (bottom)
-
-Bridge each with a tiny solder blob, side closest to the encoder body.
-The encoder itself drops into the through-hole pads with the wheel
-oriented toward the inner edge of the half. Solder the four mounting
-tabs first to hold it square, then the signal pads.
-
-## 6. Solder the slider switch (on/off)
-
-The footprint accepts an SMD C128955 slider. Tin one pad, set the slider
-on the footprint with tweezers, reflow, then solder the remaining pads
-and the two ground tabs. This switch isolates the battery — without it
-soldered in, the keyboard will not power on, even over USB.
-
-## 7. Solder the reset button
-
-Through-hole 2-pin tactile (3×6×4.3 mm). Goes on the front side near the
-MCU footprint. Insert from the front, solder on the back, trim the legs
+Solder the 12-pin sockets for the Nice!Nano. The sockets go on the front
+side. A useful trick is to tape the sockets in position from the front,
+flip the board, and solder them from the back while the tape holds them
 flush.
 
-## 8. Mount Nice!Nano sockets
-
-12-pin sockets per side, 2.54 mm spacing. The Nice!Nano sits front side,
-**components facing down toward the PCB** (this is what "reverse: true"
-in the ergogen config bakes in — the Pro Micro footprint is mirrored).
-
-The Splitkb mounting guide referenced in the BOM is the canonical
-reference for this step:
+If you want the LiPo battery to fit between the PCB and the MCU later,
+use low-profile sockets (e.g. 3DS1002-01-1\*20V13-JK by CONNFLY) — and
+see Splitkb's mounting guide for a thorough walkthrough of how to height
+the MCU sockets correctly:
 <https://docs.splitkb.com/hc/en-us/articles/360011263059>
 
-Summary:
+### On/Off switch and reset button
 
-1. Push 12 header pins through the Nice!Nano from the **top** (so the
-   plastic spacer ends up between board and pin tips), with long ends
-   pointing down.
-2. Drop the long ends through the socket on the PCB.
-3. Place the matching socket on the PCB, sit the Nice!Nano on top.
-4. Solder the **socket pins on the PCB side** first.
-5. Flip, solder the **header pins to the Nice!Nano**.
-6. Trim excess pin length.
+The on/off slider switch (C128955) goes on the **back side** of the
+board. This leaves clearance on the front for the battery to sit between
+the PCB and the MCU. The switch has 7 legs but only the 3 marked legs
+are electrically required — soldering the other tabs as mechanical
+support is optional.
 
-Use **low-profile sockets** if you want the battery to fit underneath.
-3DS1002-01-1\*20V13-JK (CONNFLY) is a known-good part.
+The 2-pin reset button goes on the **front side**: insert it from the
+front and solder the legs on the back. Orientation does not matter.
 
-## 9. (Optional) Nice!View headers
+### Scrollwheel
 
-5-pin connector next to the Nice!Nano. Same procedure: pins through the
-display module, drop through the PCB-side socket, solder PCB side first,
-then display side. The display sits front-facing.
+Before soldering the EVQWGD001 encoder, you need to trim some of its
+legs and tabs so it fits the PCB cleanly:
 
-## 10. Battery
+- Cut off the foot on the left side of the encoder (looking at the
+  encoder from the wheel side) — there is no matching hole for it on
+  the PCB.
+- Trim the overhang tabs along the long right edge of the encoder. The
+  signal pins alone are sturdy enough to hold it in place, and trimming
+  these makes the encoder much easier to seat without flexing or
+  snapping a pin.
 
-The 301230 (3.0×12×30 mm, ~110 mAh) LiPo tucks **under the Nice!Nano**.
-Route the leads through the cutout near the slider switch and solder
-to the `BAT+` / `BAT-` pads on the back of the PCB. Verify polarity with
-a multimeter before powering on; reversing a LiPo will damage the
-Nice!Nano.
+Place the encoder on the board (front side) and solder its pins from
+the back.
 
-If your battery has a JST connector, cut it off and solder the bare
-leads directly — the PCB does not have a JST footprint.
+### Hotswap sockets and diodes
 
-## 11. Switchplate
+There are **28 Kailh Choc v1 hotswap sockets** and **29 diodes** (1N4148W
+SMD) per side — one diode per switch plus one for the scrollwheel. Both
+the sockets and the diodes are mounted on the **back side** of the board.
 
-The switchplate is a 1.2 mm thin plate with cutouts for every switch and
-the scrollwheel. Two options:
+Diode orientation matters. Each 1N4148W has a marking (an arrow or a
+white line) on one end indicating the cathode. Align that mark with the
+arrow on the silkscreen for each diode footprint. If you are unsure how
+to read diode polarity, look it up before placing any — flipped diodes
+will silently break the matrix for the affected key.
 
-- **3D printed:** export with `nix build .#switchplate-step`, slice at
-  0.2 mm layer height, 0.4 mm walls, ~30% infill.
-- **PCB-cut:** order from JLCPCB using the DXF in `nix build .#pcbs`
-  (under `outlines/switchplate.dxf`). Spec 1.2 mm thickness explicitly.
+Workflow that tends to work well: tin one pad of each footprint first
+(diodes and hotswaps both), then place the part with tweezers and
+reflow that pad to anchor it, then solder the remaining pad(s). For
+the hotswaps, press the socket flat against the PCB while reflowing
+the anchor pad — gaps cause inconsistent key heights and bad switch
+seating.
 
-The switchplate is sandwiched between the PCB and the case. Switches
-clip into the switchplate first, then the whole stack is pressed into
-the hotswap sockets.
+### Battery
 
-## 12. Case
+Solder the LiPo battery (301230, 110 mAh) to the front-side battery pads
+below the MCU footprint. The pads are labelled `+` and `-` on the
+silkscreen; black wire goes to `-`, red wire goes to `+`. Double-check
+polarity with a multimeter before powering on — a reversed LiPo will
+damage the Nice!Nano (and possibly catch fire).
 
-(Not yet designed for thenar — see the TODO at the top.) The upstream
-corax case will not fit; the outline differs because of the extra
-outer-column key. Plan on either:
+The battery is intended to sit on the front side, tucked under the MCU.
+You can mount it on the back instead if you prefer; the pads work either
+way as long as polarity matches the silkscreen.
 
-- Designing a fresh case from the `outlines/case.dxf` produced by
-  `nix build .#pcbs`, or
-- Modifying the upstream corax54 case in Fusion / FreeCAD to extend the
-  outer column.
+### MCU
 
-Until then, the keyboard is usable as a bare PCB + switchplate sandwich
-on silicone feet.
+Add the Nice!Nano and solder the pins on the MCU side. The MCU sits on
+the **front side, facing down** (components toward the PCB). If you
+chose low-profile sockets, there should be enough room for the battery
+to live underneath. If not, position the pins so the gap is large
+enough — solder the first and last pin to set the height, check
+clearance, then solder the rest.
 
-## 13. Flash the firmware
+### Switches and keycaps
 
-TODO: Once a ZMK config repo for thenar exists, link it here. Until then:
+Snap the Kailh Choc v1 switches (PG1350) into the hotswap sockets from
+the front side. If you are using a switchplate, install it before the
+switches — the switches clip into the plate first, then the whole
+assembly presses down into the sockets.
 
-1. Plug the assembled half into a computer via USB-C.
-2. Double-tap the reset button — the Nice!Nano enumerates as a USB
-   mass-storage device named `NICENANO`.
-3. Drag a compiled `*.uf2` onto the drive. It reboots and disappears.
-4. Repeat for the other half.
+Add keycaps.
 
-Pair the two halves via ZMK's default bonding flow (hold reset on the
-peripheral side after the central is awake).
+## Display (Nice!View)
 
-## 14. Sanity check
+TODO
 
-With the case off, slide the power switch on:
+## 3D printed case
 
-- Nice!View (if installed) should show the ZMK splash.
-- Tap a key — it should register on the connected host.
-- Roll the scrollwheel — it should scroll.
-
-If a key doesn't register: probe the matrix at the diode and the column
-pin on the Nice!Nano with continuity mode. A cold solder joint on a
-hotswap socket is the single most common failure.
-
-Done. Enjoy.
+TODO — and note: the upstream corax54 case will not fit thenar without
+modification, because the outer column has an extra key. Either redesign
+from `outlines/case.dxf` (produced by `nix build .#pcbs`) or extend the
+upstream case in CAD.
