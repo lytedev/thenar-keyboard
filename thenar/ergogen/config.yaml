@@ -386,14 +386,25 @@ pcbs:
           rotate: 90
           shift: [-3, 1.27]
       nicenano:
-        what: nicenano
+        # ceoloide's mcu_nice_nano - single-net-per-pad with internal
+        # reversibility jumpers (same pattern as display_nice_view). Replaces
+        # the old corax-style approach that used 8 external jumpers + 6
+        # hybrid nets (RAW_P1, P1_RAW, GND_RST, etc.) to share copper.
+        what: mcu_nice_nano
         where: mcu
+        adjust:
+          # ceoloide's footprint is naturally tall (long axis Y); ours was
+          # naturally wide (long axis X). The mcu anchor already rotates -90
+          # for our wide-style; flip another 90 here so ceoloide's tall layout
+          # ends up matching the old physical pad positions.
+          rotate: 90
         params:
-          orientation: down
-          RAW: RAW_P1
-          GND1: GND_P0
-          RST: RST_GND
-          VCC: VCC_GND 
+          side: 'F'
+          reversible: true
+          RAW: RAW
+          GND: GND
+          RST: RST
+          VCC: VCC
           P21: ENCA
           P20: ENCB
           P19: row0
@@ -402,10 +413,8 @@ pcbs:
           P14: row3
           P16: row4
           P10: row5
-          P1: P1_RAW
-          P0: P0_GND
-          GND2: GND_RST
-          GND3: GND_VCC
+          P1: P1
+          P0: P0
           P2: SDA
           P3: SCL
           P4: CS
@@ -414,82 +423,6 @@ pcbs:
           P7: col2
           P8: col3
           P9: col4
-      jumper_left_raw:
-        what: jumper
-        where: mcu
-        params:
-          from: RAW
-          to: RAW_P1
-          side: B
-        adjust:
-          shift: [-11.45, -2.5]
-          rotate: 180
-      jumper_left_rst:
-        what: jumper
-        where: mcu
-        params:
-          from: RST
-          to: RST_GND
-          side: B
-        adjust:
-          shift: [-8.9, -2.5]
-          rotate: 180
-      jumper_left_vcc:
-        what: jumper
-        where: mcu
-        params:
-          from: VCC
-          to: VCC_GND
-          side: B
-        adjust:
-          shift: [-6.35, -2.5]
-          rotate: 180
-      jumper_left_gnd:
-        what: jumper
-        where: mcu
-        params:
-          from: GND
-          to: GND_RST
-          side: B
-        adjust:
-          shift: [-8.9, 2.5]
-      jumper_right_raw:
-        what: jumper
-        where: mcu
-        params:
-          from: RAW
-          to: P1_RAW
-          side: F
-        adjust:
-          shift: [-11.45, 2.5]
-      jumper_right_rst:
-        what: jumper
-        where: mcu
-        params:
-          from: RST
-          to: GND_RST
-          side: F
-        adjust:
-          shift: [-8.9, 2.5]
-      jumper_right_vcc:
-        what: jumper
-        where: mcu
-        params:
-          from: VCC
-          to: GND_VCC
-          side: F
-        adjust:
-          shift: [-6.35, 2.5]
-      jumper_right_gnd:
-        what: jumper
-        where: mcu
-        params:
-          from: GND
-          to: RST_GND
-          side: F
-        adjust:
-          shift: [-8.9, -2.5]
-          rotate: 180
       niceview:
         # ceoloide's display_nice_view footprint - one net per pad, generates
         # its own reversibility jumpers internally. This replaces the old
