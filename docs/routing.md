@@ -159,24 +159,37 @@ document and just run `nix build .#gerbers-zip`.
 - **Run DRC frequently**, not just at the end. Catching a clearance
   violation after one trace is fast; catching it after 200 is painful.
 
-## What about autorouting (freerouting)?
+## Autorouting (freerouting)
 
-We tried, it didn't work. `thenar/scripts/autoroute.py` is the
-scaffolding (KiCad → DSN → freerouting → SES → KiCad), but the script
-bails out at the DSN export step.
+The flake exposes a `.#routed-auto` package that runs the scaffold
+through freerouting and produces a kicad_pcb with traces:
 
-The reason is fundamental to the reversible-PCB design inherited from
-upstream corax: the MCU, display, and scrollwheel each have jumper
-pairs that share copper between two named nets (e.g. `NN_GND_SCL` =
-"Nice!Nano GND on one half-PCB, SCL on the other"). KiCad's DSN
-exporter refuses to emit a design where two nets share copper. To get
-freerouting working you would first need to flatten the design to one
-half (pick left or right, rewrite the hybrid nets to their concrete
-left-or-right-only nets, drop the unused jumpers), autoroute the
-result, and either accept "one half only" output or mirror the result.
+```sh
+nix build .#routed-auto
+# inspect:
+nix develop -c pcbnew result/keyboard.kicad_pcb
+# accept:
+cp result/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
+chmod u+w thenar/routed/keyboard.kicad_pcb
+```
 
-That flattening pass hasn't been written. The `autoroute.py` script
-documents what's needed at the top if you want to take a swing at it.
+By default 50 passes (~25 min). The result is NOT used by `.#gerbers`
+automatically — that still reads `thenar/routed/`, so you have to copy
+the autoroute output over the committed file if you want it to ship.
+This guards against an autoroute regression silently replacing a careful
+hand-routed PCB.
+
+Implementation lives in `thenar/scripts/autoroute.py`. Two gotchas:
+
+- KiCad's Specctra DSN exporter chokes on a few ergogen-generated
+  footprints: `text.js` has zero pads, and `battery.js` reuses a confusing
+  module name. The script strips those before DSN export and re-applies
+  the routing to the original (untouched) board via SES import.
+- The reversible-PCB pattern still creates "shared copper" hybrid nets
+  around the MCU and scrollwheel jumpers. Freerouting routes them anyway
+  but generally leaves a handful of nets unrouted in the densest areas.
+  How close `.#routed-auto` gets to 100% is design-dependent — see the
+  pass count in `flake.nix` if you want to crank it up.
 
 ## Further reading
 

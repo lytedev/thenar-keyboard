@@ -59,6 +59,32 @@
           routedKeyboard = ./thenar/routed/keyboard.kicad_pcb;
           routedSwitchplate = ./thenar/routed/switchplate.kicad_pcb;
 
+          # Autoroute the scaffold via freerouting. Output is a kicad_pcb with
+          # traces baked in. NOT used by .#gerbers by default - the committed
+          # thenar/routed/ takes precedence so a careful hand-routed PCB does
+          # not get clobbered by autorouter output. To use this:
+          #   nix build .#routed-auto
+          #   cp result/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
+          # Pass count controls quality vs runtime: 50 ~25min, gets ~95% routed.
+          routed-auto = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-routed-auto";
+            src = ./thenar;
+            nativeBuildInputs = [ pkgs.kicad kicadPython pkgs.freerouting ];
+            buildPhase = ''
+              runHook preBuild
+              export HOME=$(mktemp -d)
+              # Re-derive a fresh kicad_pcb from the scaffold so this stage is
+              # not coupled to whatever is currently in thenar/routed/.
+              cp ${scaffold}/pcbs/keyboard.kicad_pcb $TMPDIR/in.kicad_pcb
+              chmod u+w $TMPDIR/in.kicad_pcb
+              mkdir -p $out
+              kicad-python ./scripts/autoroute.py \
+                $TMPDIR/in.kicad_pcb $out/keyboard.kicad_pcb 50
+              runHook postBuild
+            '';
+            dontInstall = true;
+          };
+
           gerbers = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-gerbers";
             nativeBuildInputs = [ pkgs.kicad ];
@@ -139,7 +165,7 @@
         in
         {
           inherit scaffold gerbers gerbers-zip switchplate-step
-                  check-routing-drift kicadPython;
+                  check-routing-drift kicadPython routed-auto;
           default = gerbers-zip;
         });
 
