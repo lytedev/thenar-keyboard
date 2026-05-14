@@ -308,15 +308,22 @@ pcbs:
           # 8.275 is exactly above the pad
           shift: [8.275, 1]
       scrollwheel:
+        # Each encoder pin (A/B/C/D) gets a UNIQUE local net (sw_a..sw_d)
+        # instead of a shared-copper hybrid like ENCB_undef. The local nets
+        # have only one routing endpoint each (the encoder pad), and the
+        # jumpers below bridge them to real signals (ENCA, ENCB, GND)
+        # depending on which side the encoder is mounted on. This is the
+        # same single-net-per-pad pattern ceoloide's footprints use - it
+        # unblocks freerouting on this design.
         what: scrollwheel_mirrored
         where: [scrollwheel]
         params:
           from: "{{column_net}}"
           to: "{{colrow}}"
-          A: ENCB_undef
-          B: GND_ENCA
-          C: ENCA_GND
-          D: undef_ENCB
+          A: sw_a
+          B: sw_b
+          C: sw_c
+          D: sw_d
       scroll_diode:
         what: diode
         where: [scrollwheel]
@@ -325,13 +332,14 @@ pcbs:
           to: "{{row_net}}"
         adjust:
           shift: [-5, -9]
-      jumper_sw_left_a:
+      # B-side mount: pin order is A=ENCB, B=GND, C=ENCA. (D=unused.)
+      jumper_sw_left_encb:
         what: jumper
         where: [scrollwheel]
         params:
-          side: B  
-          to: ENCB_undef
+          side: B
           from: ENCB
+          to: sw_a
         adjust:
           rotate: 90
           shift: [-3, 3.81]
@@ -339,29 +347,30 @@ pcbs:
         what: jumper
         where: [scrollwheel]
         params:
-          side: B  
-          to: GND_ENCA
+          side: B
           from: GND
+          to: sw_b
         adjust:
           rotate: 90
           shift: [-3, 1.27]
-      jumper_sw_left_ENCA:
+      jumper_sw_left_enca:
         what: jumper
         where: [scrollwheel]
         params:
-          side: B  
-          to: ENCA_GND
+          side: B
           from: ENCA
+          to: sw_c
         adjust:
           rotate: 90
           shift: [-3, -1.27]
-      jumper_sw_right_a:
+      # F-side mount: pin order is reversed - D=ENCB, C=GND, B=ENCA. (A=unused.)
+      jumper_sw_right_encb:
         what: jumper
         where: [scrollwheel]
         params:
-          side: F  
-          to: undef_ENCB
+          side: F
           from: ENCB
+          to: sw_d
         adjust:
           rotate: 90
           shift: [-3, -3.81]
@@ -369,19 +378,19 @@ pcbs:
         what: jumper
         where: [scrollwheel]
         params:
-          side: F  
-          to: ENCA_GND
+          side: F
           from: GND
+          to: sw_c
         adjust:
           rotate: 90
           shift: [-3, -1.27]
-      jumper_sw_right_ENCA:
+      jumper_sw_right_enca:
         what: jumper
         where: [scrollwheel]
         params:
-          side: F  
-          to: GND_ENCA
+          side: F
           from: ENCA
+          to: sw_b
         adjust:
           rotate: 90
           shift: [-3, 1.27]
