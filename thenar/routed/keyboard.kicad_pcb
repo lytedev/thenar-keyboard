@@ -3967,7 +3967,7 @@
 
         (at 115.070972 87.1769487 90)
 
-        (fp_text user "Left Hand Front" (at 0 0 180) (layer F.SilkS knockout) (effects (font (size 1.6 1.6) (thickness 0.15))  ))
+        (fp_text user "Left Hand Up" (at 0 0 180) (layer F.SilkS knockout) (effects (font (size 1.6 1.6) (thickness 0.15))  ))
 
         )
         
@@ -3976,7 +3976,7 @@
 
         (at 115.070972 87.1769487 90)
 
-        (fp_text user "Right Hand Front" (at 0 0 180) (layer B.SilkS knockout) (effects (font (size 1.6 1.6) (thickness 0.15)) (justify mirror) ))
+        (fp_text user "Right Hand Up" (at 0 0 180) (layer B.SilkS knockout) (effects (font (size 1.6 1.6) (thickness 0.15)) (justify mirror) ))
 
         )
         

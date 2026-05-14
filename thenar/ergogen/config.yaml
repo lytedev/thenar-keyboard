@@ -661,7 +661,7 @@ pcbs:
         what: text
         where: matrix_middle_home
         params:
-          text: "Left Hand Front"
+          text: "Left Hand Up"
           side: F
           knockout: true
           fontsize: 1.6
@@ -672,7 +672,7 @@ pcbs:
         what: text
         where: matrix_middle_home
         params:
-          text: "Right Hand Front"
+          text: "Right Hand Up"
           side: B
           knockout: true
           fontsize: 1.6

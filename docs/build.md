@@ -75,19 +75,27 @@ recommend [JLCPCB](https://jlcpcb.com/) with these settings:
 
 ## Building the keyboard
 
-You need two PCBs — one for each hand. The PCB is reversible, so the same
-board is used for both halves; the side you treat as the front determines
-which hand the half becomes.
+You need two PCBs — one for each hand. The PCB is reversible: the same
+board is used for both halves, and which face of the board ends up facing
+up (toward your fingers) determines whether it's the left or right half.
 
-If this guide says "front side" and you are building the left half, you
-work on the side that has **"Left Hand Front"** silkscreened on it. The
-side with "Right Hand Front" is then the back side for that half. The
-right half is the opposite: "Right Hand Front" is its front, "Left Hand
-Front" is its back.
+Two pieces of jargon to keep straight:
 
-A good strategy is to mark the intended front side of each half with a
-piece of tape or a post-it before you start. Check before every step that
-you are working on the correct side.
+- The **up side** is the face that ends up pointing upward in the
+  finished keyboard — the side your fingers see (through the switchplate
+  and keycaps). Switches, MCU, battery, scrollwheel, reset, and screen
+  all live on this face.
+- The **down side** is the face that ends up pointing at your desk.
+  Hotswap sockets, diodes, on/off switch, and jumpers live here.
+
+To tell which face should be up for which hand, look at the silkscreen:
+
+- On the left half, the up side has **"Left Hand Up"** silkscreened on it.
+- On the right half, the up side has **"Right Hand Up"** silkscreened on it.
+
+The opposite face of each is the down side. Before you start, mark the
+intended up face of each PCB with tape or a post-it. Check before every
+step that you are working on the correct side.
 
 ### Jumpers
 
@@ -96,9 +104,9 @@ display, scrollwheel). They make the MCU/display/encoder footprints
 reusable between the two halves by letting you pick which side connects
 each net.
 
-**Solder the jumpers ONLY on the back side of the PCB.** That is: when
-building the left half (front labelled "Left Hand Front"), solder the
-jumpers on the "Right Hand Front" side. This is critical — soldering on
+**Solder the jumpers ONLY on the down side of the PCB.** That is: when
+building the left half (up side labelled "Left Hand Up"), solder the
+jumpers on the "Right Hand Up" side. This is critical — soldering on
 the wrong side will not work, and on the MCU jumpers in particular it
 can short pins together and destroy the Nice!Nano on power-up.
 
@@ -106,10 +114,10 @@ Bridge each jumper with a small blob of solder across the two pads.
 
 ### MCU sockets
 
-Solder the 12-pin sockets for the Nice!Nano. The sockets go on the front
-side. A useful trick is to tape the sockets in position from the front,
-flip the board, and solder them from the back while the tape holds them
-flush.
+Solder the 12-pin sockets for the Nice!Nano. The sockets go on the up
+side. A useful trick is to tape the sockets in position from the up
+side, flip the board, and solder them from the down side while the tape
+holds them flush.
 
 If you want the LiPo battery to fit between the PCB and the MCU later,
 use low-profile sockets (e.g. 3DS1002-01-1\*20V13-JK by CONNFLY) — and
@@ -119,14 +127,14 @@ the MCU sockets correctly:
 
 ### On/Off switch and reset button
 
-The on/off slider switch (C128955) goes on the **back side** of the
-board. This leaves clearance on the front for the battery to sit between
-the PCB and the MCU. The switch has 7 legs but only the 3 marked legs
-are electrically required — soldering the other tabs as mechanical
-support is optional.
+The on/off slider switch (C128955) goes on the **down side** of the
+board. This leaves clearance on the up side for the battery to sit
+between the PCB and the MCU. The switch has 7 legs but only the 3
+marked legs are electrically required — soldering the other tabs as
+mechanical support is optional.
 
-The 2-pin reset button goes on the **front side**: insert it from the
-front and solder the legs on the back. Orientation does not matter.
+The 2-pin reset button goes on the **up side**: insert it from the up
+side and solder the legs on the down side. Orientation does not matter.
 
 ### Scrollwheel
 
@@ -141,14 +149,14 @@ legs and tabs so it fits the PCB cleanly:
   these makes the encoder much easier to seat without flexing or
   snapping a pin.
 
-Place the encoder on the board (front side) and solder its pins from
-the back.
+Place the encoder on the board (up side) and solder its pins from
+the down side.
 
 ### Hotswap sockets and diodes
 
 There are **28 Kailh Choc v1 hotswap sockets** and **29 diodes** (1N4148W
 SMD) per side — one diode per switch plus one for the scrollwheel. Both
-the sockets and the diodes are mounted on the **back side** of the board.
+the sockets and the diodes are mounted on the **down side** of the board.
 
 Diode orientation matters. Each 1N4148W has a marking (an arrow or a
 white line) on one end indicating the cathode. Align that mark with the
@@ -165,20 +173,20 @@ seating.
 
 ### Battery
 
-Solder the LiPo battery (301230, 110 mAh) to the front-side battery pads
+Solder the LiPo battery (301230, 110 mAh) to the up-side battery pads
 below the MCU footprint. The pads are labelled `+` and `-` on the
 silkscreen; black wire goes to `-`, red wire goes to `+`. Double-check
 polarity with a multimeter before powering on — a reversed LiPo will
 damage the Nice!Nano (and possibly catch fire).
 
-The battery is intended to sit on the front side, tucked under the MCU.
-You can mount it on the back instead if you prefer; the pads work either
-way as long as polarity matches the silkscreen.
+The battery is intended to sit on the up side, tucked under the MCU.
+You can mount it on the down side instead if you prefer; the pads work
+either way as long as polarity matches the silkscreen.
 
 ### MCU
 
 Add the Nice!Nano and solder the pins on the MCU side. The MCU sits on
-the **front side, facing down** (components toward the PCB). If you
+the **up side, facing down** (components toward the PCB). If you
 chose low-profile sockets, there should be enough room for the battery
 to live underneath. If not, position the pins so the gap is large
 enough — solder the first and last pin to set the height, check
@@ -187,7 +195,7 @@ clearance, then solder the rest.
 ### Switches and keycaps
 
 Snap the Kailh Choc v1 switches (PG1350) into the hotswap sockets from
-the front side. If you are using a switchplate, install it before the
+the up side. If you are using a switchplate, install it before the
 switches — the switches clip into the plate first, then the whole
 assembly presses down into the sockets.
 
