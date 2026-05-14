@@ -39,7 +39,9 @@ to start with is the Sofle guide:
 > useful gerbers can be produced. See `thenar/routed/README.md` for
 > current status.
 
-If you are the one doing the routing:
+If you are the one doing the routing, see the dedicated
+[Routing Guide](./RoutingGuide.md) for the step-by-step. The short
+version:
 
 ```sh
 nix build .#scaffold

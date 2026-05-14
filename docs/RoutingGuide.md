@@ -1,0 +1,163 @@
+# PCB Routing Guide
+
+> **⚠️ LLM-generated, unverified.** Written by Claude based on the flake
+> layout and general KiCad practice, not from an actual routing pass on
+> this board. Treat as a starting checklist; expect to adjust as you
+> discover what the real PCB needs. Corrections welcome after a successful
+> route.
+
+This walks through getting from the ergogen scaffold to a hand-routed PCB
+that gerbers can be exported from. The output of this process is a
+committed `thenar/routed/keyboard.kicad_pcb` that everyone else can fab
+without repeating the work.
+
+## 1. Open the scaffold in KiCad
+
+From the repo root:
+
+```sh
+nix develop -c kicad thenar/routed/keyboard.kicad_pcb
+```
+
+That opens the committed (currently unrouted) PCB inside the flake's
+KiCad. If you want to start from a pristine scaffold instead — for
+example, after editing `thenar/ergogen/config.yaml` — regenerate first:
+
+```sh
+nix build .#scaffold
+cp result/pcbs/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
+chmod u+w thenar/routed/keyboard.kicad_pcb
+nix develop -c kicad thenar/routed/keyboard.kicad_pcb
+```
+
+(`result/` is a symlink into `/nix/store`, which is read-only — that's
+why the copy + `chmod` is needed.)
+
+## 2. Get oriented
+
+Ergogen has already done the boring parts:
+
+- All footprints are placed: switches, hotswap sockets, diodes, MCU,
+  display, scrollwheel, slider, reset button, screw holes.
+- Every net is named (e.g. `row0`, `col4`, `GND`, `VCC`, `BAT+`).
+- The board outline is on Edge.Cuts.
+
+What is missing:
+
+- **Copper traces.** Every net needs its connections drawn.
+- **Power planes / fills.** Typically a GND pour on both layers.
+- **Vias** wherever a trace needs to switch layers.
+
+Pull up the **net inspector** (View → Net Inspector, or `Inspect → Net
+Inspector` depending on KiCad version) and you should see all nets
+listed with current length 0 and pad count > 1 — i.e. unrouted.
+
+## 3. Run DRC once before you start
+
+`Inspect → Design Rules Checker`. Expect a wall of "unconnected pads"
+errors — that's fine, that's what you're about to fix. Note any errors
+that are *not* unconnected-pads warnings (e.g. footprint overlap, courtyard
+violations), because those are real and routing won't fix them.
+
+## 4. Set up reasonable rules
+
+`File → Board Setup → Design Rules → Constraints` / `Net Classes`. For a
+choc-spaced two-layer hand-routed split keyboard, these are common
+starting values:
+
+| Setting               | Value          |
+|-----------------------|----------------|
+| Minimum trace width   | 0.20 mm        |
+| Default trace width   | 0.25 mm        |
+| Power trace width     | 0.40 mm        |
+| Minimum via diameter  | 0.60 mm        |
+| Minimum via drill     | 0.30 mm        |
+| Clearance             | 0.20 mm        |
+
+JLCPCB's standard 2-layer process is comfortable with all of these.
+Tighter is possible but increases the rejection rate.
+
+## 5. Route
+
+Pick an order that minimises rework. A pattern that tends to work for
+split keebs:
+
+1. **Power first.** Route `VCC` and `BAT+` from the slider switch /
+   battery pads to the Nice!Nano. Wide trace (0.4 mm+).
+2. **Ground last via a pour.** Don't hand-route most ground connections;
+   leave them for a copper fill at the end.
+3. **Matrix rows next.** Each `colN` net runs down a column from key to
+   key — easy, nearly straight runs.
+4. **Matrix columns.** Each `rowN` net runs across all keys in a row.
+   These are trickier because they cross the column traces; use the
+   opposite layer or hop over with a via.
+5. **MCU + display + scrollwheel signals last.** They are the most
+   constrained but also the fewest nets.
+6. **GND copper pour** on both F.Cu and B.Cu (`Edit → Add Filled Zone`,
+   tied to `GND`). Re-run DRC.
+
+KiCad's interactive router (default `X` shortcut) handles most of this.
+"Walk around" mode is usually the right choice for hand routing; "Shove"
+is helpful in tight clusters near the MCU.
+
+## 6. Verify
+
+```sh
+# inside kicad
+Inspect -> Design Rules Checker     # must come up clean (zero unrouted nets)
+```
+
+Then save, exit KiCad, and from the shell:
+
+```sh
+nix flake check                # confirms footprint placement matches the scaffold
+nix build .#gerbers            # exports gerbers from the routed file
+nix build .#gerbers-zip        # zipped, ready to upload
+```
+
+If `nix flake check` fails with a "routing drift" error, you've edited
+the ergogen config since you started routing — re-merge by hand and
+re-check.
+
+## 7. Commit
+
+```sh
+jj diff -- thenar/routed/      # sanity check
+jj describe -m "pcb: route keyboard matrix + MCU + scrollwheel"
+jj bookmark set main -r @
+jj git push
+```
+
+Once pushed, anyone else building the keyboard can skip this whole
+document and just run `nix build .#gerbers-zip`.
+
+## Tips
+
+- **Use `F.Cu` for horizontal runs, `B.Cu` for vertical** (or vice versa)
+  as a default convention. It dramatically reduces the number of vias.
+- **Don't route under switch bodies if you can avoid it.** A scratched
+  trace from a wonky switch is a miserable thing to debug.
+- **The reversible PCB constraint** means every footprint exists in
+  mirrored form on both layers. Pay attention to which side each pad is
+  on; routing to the wrong side connects to the wrong half-keyboard.
+- **Save often.** KiCad's autosave is fine but routing a full split
+  takes hours and a power loss mid-session hurts.
+- **Run DRC frequently**, not just at the end. Catching a clearance
+  violation after one trace is fast; catching it after 200 is painful.
+
+## Further reading
+
+The upstream corax README cited FlatFootFox's ergogen-to-KiCad tutorial
+as the reference it leaned on:
+<https://flatfootfox.com/ergogen-introduction/>
+
+Other useful references (search rather than dead-link):
+
+- KiCad's official tutorials at <https://www.kicad.org/help/tutorials/>
+- "ZMK split keyboard PCB" walkthroughs on YouTube — several creators
+  cover the choc + Nice!Nano + Nice!View pattern end-to-end
+- Looking at the routed PCBs in similar projects: the upstream
+  [corax-keyboard](https://github.com/dnlbauer/corax-keyboard) repo's
+  committed `corax54/pcbs/pcbs/keyboard.kicad_pcb` is essentially the
+  same board minus one key; opening it side-by-side with the thenar
+  scaffold is the fastest way to see how this one wants to be routed.
