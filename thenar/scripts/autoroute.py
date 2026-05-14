@@ -141,9 +141,22 @@ def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
               flush=True)
 
         # Phase 2: freerouting.
-        print(f"[autoroute] running freerouting ({passes} passes) ...", flush=True)
+        # -us Global   : optimize for global connectivity rather than local
+        #                trace cost - greedy mode plateaus quickly leaving
+        #                ~30 unrouted nets even with 30+ passes
+        # -is Sequential : route nets in fixed order rather than rescoring
+        #                  each pass - reduces churn
+        print(f"[autoroute] running freerouting ({passes} passes, global+sequential) ...",
+              flush=True)
         subprocess.run(
-            ["freerouting", "-de", str(dsn), "-do", str(ses), "-mp", str(passes)],
+            [
+                "freerouting",
+                "-de", str(dsn),
+                "-do", str(ses),
+                "-mp", str(passes),
+                "-us", "Global",
+                "-is", "Sequential",
+            ],
             check=True,
         )
         if not ses.is_file():
