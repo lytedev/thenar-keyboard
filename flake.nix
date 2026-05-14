@@ -33,8 +33,11 @@
               runHook preBuild
               mkdir -p $out
               ergogen ./ergogen -o $out
+              # Only the keyboard PCB gets a project file - the switchplate is
+              # an outline-only board (never hand-routed) and a sibling
+              # switchplate.kicad_pro in the same directory would conflict with
+              # keyboard.kicad_pro in KiCad's launcher.
               python3 ./scripts/write_kicad_pro.py $out/pcbs/keyboard.kicad_pcb
-              python3 ./scripts/write_kicad_pro.py $out/pcbs/switchplate.kicad_pcb
               runHook postBuild
             '';
             dontInstall = true;
