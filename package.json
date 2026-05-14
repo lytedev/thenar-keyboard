@@ -1,9 +1,0 @@
-{
-  "name": "Corax",
-  "description": "\"Corax\", yet a split keyboard",
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "ergogen": "https://github.com/ergogen/ergogen.git#develop"
-  }
-}

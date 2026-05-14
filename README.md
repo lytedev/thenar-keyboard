@@ -1,44 +1,48 @@
-# Corax: A column-staggered fully-wireless split keyboard with scrollwheels.
+# Thenar
+
+A column-staggered, fully-wireless split keyboard with scrollwheels — 56 keys (28 per half + thumb cluster). Choc-spaced, hotswap, Nice!Nano + ZMK.
 
 - Choc-spaced, hot-swappable
-- Two versions: with 56 or 54 keys
-- Scrollwheel (EVQWGD001) on both sides
+- Scrollwheel (`EVQWGD001`) on both sides
 - Strong pinky stagger (0.66) and a 5 deg. pinky splay
-- Fully wireless built for Nice!Nano + ZMK (no TRRS Jack)
+- Fully wireless built for Nice!Nano + ZMK (no TRRS jack)
 - Nice!View support (5 pin connector)
 - Reversible PCB
-- 3d printable magnetic case, switchplate and MCU cover 
+- 3d printable magnetic case, switchplate and MCU cover
 
 ## Gallery
 
-![corax54](./images/corax54.jpg)
-![corax56](./images/corax56.jpg)
-![mcu1](./images/mcu1.jpg)
-![mcu2](./images/mcu2.jpg)
-![case](./images/magnetic_case.jpg)
-![pcb](./images/pcb.jpg)
-
-## Corax56 vs Corax54
-
-I initially designed the Corax56 (=56 keys) with 4 pinky keys. The upper key (usually mapped to ESC) was placed in a new column because I found it easier to reach horizontally than vertically.
-Over the time, I realized that I am not using this button very often. The Corax54 was born as a more compact version where the pinky cluster misses this additonal column and has only 54 keys (2 less). This is the only difference between the two versions.
+TODO: Take photos of the assembled Thenar and add them here.
 
 ## Firmware
 
-Natively supports [ZMK](https://zmk.dev/). 
-A ZMK module that supports both the Corax56 and Corax54 can be found [here](https://github.com/dnlbauer/zmk-keyboards-corax).
+Natively supports [ZMK](https://zmk.dev/).
 
-My personal firmware build is available at [https://github.com/dnlbauer/corax-zmk-config](https://github.com/dnlbauer/corax-zmk-config).
+TODO: Fork/create a ZMK config + module for the Thenar layout. The old Corax
+ZMK module does not cover the extra num-row key on the outermost column.
 
 ## Build guide
 
-[see here](./docs/BuildGuide.md)
+[see here](./docs/BuildGuide.md) (TODO: stub — needs to be written for Thenar).
 
-## Standing on the shoulders of giants
+## Development
 
-- A great tutorial I referenced a lot by FlatFootFox: https://flatfootfox.com/ergogen-introduction/
-- Lots of inspiration and ideas for this project came from these boards: [Choccy](https://github.com/sprengboard/choccy), [Sofle](https://github.com/josefadamcik/SofleKeyboard), [brain](https://github.com/Wesztman/brain), [spleeb](https://github.com/chrishoage/spleeb)
+Everything builds through Nix flake packages. From the repo root:
+
+```sh
+nix build .#pcbs              # ergogen -> KiCad PCBs + DXF outlines
+nix build .#gerbers           # kicad-cli -> gerber + drill files
+nix build .#gerbers-zip       # zipped gerbers for fab houses (e.g. JLCPCB)
+nix build .#switchplate-step  # STEP model of the switchplate (1.2mm)
+```
+
+Each `result` symlink points at the artifact in `/nix/store`. For an interactive
+shell with `ergogen`, `kicad-cli`, and `zip` available:
+
+```sh
+nix develop
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

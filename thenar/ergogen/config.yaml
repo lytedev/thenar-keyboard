@@ -32,21 +32,8 @@ points:
         padding: 1ky
         spread: 1kx
       columns:
-        outer2:
-          rows:
-            mod:
-              skip: true
-            bottom.skip: true
-            home:
-              tags: [switch_top]
-              bind: [0, 5, 0, 0]
-              row_net: col0
-            top.skip: true
-            num.skip: true
-          key.column_net: row0
         outer:
           rows:
-            num.skip: true
             mod.skip: true
           key:
             column_net: row0
@@ -177,12 +164,16 @@ outlines:
       operation: stack
       fillet: 2
       points:
-        - ref: matrix_outer2_home
+        - ref: matrix_outer_home
           shift: [-0.5px, -0.5py]
-        - ref: matrix_outer2_home
+        - ref: matrix_outer_home
           shift: [-0.5px, 0.5py]
         - ref: matrix_outer_top
           shift: [-0.5px, 0.5py]
+        - ref: matrix_outer_num
+          shift: [-0.5px, 0.5py]
+        - ref: matrix_outer_num
+          shift: [0.5px, 0.5py]
         - ref: matrix_pinky_num
           shift: [-0.5px, 0.5py]
         - ref: matrix_ring_num
@@ -212,12 +203,16 @@ outlines:
       operation: stack
       fillet: 2
       points:
-        - ref: matrix_outer2_home
+        - ref: matrix_outer_home
           shift: [-0.5px, -0.5py]
-        - ref: matrix_outer2_home
+        - ref: matrix_outer_home
           shift: [-0.5px, 0.5py]
         - ref: matrix_outer_top
           shift: [-0.5px, 0.5py]
+        - ref: matrix_outer_num
+          shift: [-0.5px, 0.5py]
+        - ref: matrix_outer_num
+          shift: [0.5px, 0.5py]
         - ref: matrix_pinky_num
           shift: [-0.5px, 0.5py]
         - ref: matrix_ring_num
@@ -697,7 +692,7 @@ pcbs:
         what: text
         where: matrix_middle_mod
         params:
-          text: "Corax56 rev. 1.1"
+          text: "Thenar rev. 1.0"
         adjust:
           rotate: 82
           shift: [-9, -11]
@@ -706,7 +701,7 @@ pcbs:
         where: matrix_middle_mod
         params:
           side: B
-          text: "Corax56 rev. 1.1"
+          text: "Thenar rev. 1.0"
         adjust:
           rotate: 82
           shift: [-9, -11]
