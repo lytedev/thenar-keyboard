@@ -23,7 +23,7 @@ ZMK module does not cover the extra num-row key on the outermost column.
 
 ## Build guide
 
-[see here](./docs/BuildGuide.md) (TODO: stub — needs to be written for Thenar).
+[see the docs](./docs/) — [build](./docs/build.md), [routing](./docs/routing.md). Both are LLM-drafted and unverified; treat them as starting points until someone has built and routed a Thenar end-to-end.
 
 ## Development
 

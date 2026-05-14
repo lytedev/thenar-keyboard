@@ -40,7 +40,7 @@ to start with is the Sofle guide:
 > current status.
 
 If you are the one doing the routing, see the dedicated
-[Routing Guide](./RoutingGuide.md) for the step-by-step. The short
+[routing guide](./routing.md) for the step-by-step. The short
 version:
 
 ```sh
