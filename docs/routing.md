@@ -159,6 +159,25 @@ document and just run `nix build .#gerbers-zip`.
 - **Run DRC frequently**, not just at the end. Catching a clearance
   violation after one trace is fast; catching it after 200 is painful.
 
+## What about autorouting (freerouting)?
+
+We tried, it didn't work. `thenar/scripts/autoroute.py` is the
+scaffolding (KiCad → DSN → freerouting → SES → KiCad), but the script
+bails out at the DSN export step.
+
+The reason is fundamental to the reversible-PCB design inherited from
+upstream corax: the MCU, display, and scrollwheel each have jumper
+pairs that share copper between two named nets (e.g. `NN_GND_SCL` =
+"Nice!Nano GND on one half-PCB, SCL on the other"). KiCad's DSN
+exporter refuses to emit a design where two nets share copper. To get
+freerouting working you would first need to flatten the design to one
+half (pick left or right, rewrite the hybrid nets to their concrete
+left-or-right-only nets, drop the unused jumpers), autoroute the
+result, and either accept "one half only" output or mirror the result.
+
+That flattening pass hasn't been written. The `autoroute.py` script
+documents what's needed at the top if you want to take a swing at it.
+
 ## Further reading
 
 The upstream corax README cited FlatFootFox's ergogen-to-KiCad tutorial

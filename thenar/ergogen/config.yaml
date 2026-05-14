@@ -172,8 +172,6 @@ outlines:
           shift: [-0.5px, 0.5py]
         - ref: matrix_outer_num
           shift: [-0.5px, 0.5py]
-        - ref: matrix_outer_num
-          shift: [0.5px, 0.5py]
         - ref: matrix_pinky_num
           shift: [-0.5px, 0.5py]
         - ref: matrix_ring_num
@@ -211,8 +209,6 @@ outlines:
           shift: [-0.5px, 0.5py]
         - ref: matrix_outer_num
           shift: [-0.5px, 0.5py]
-        - ref: matrix_outer_num
-          shift: [0.5px, 0.5py]
         - ref: matrix_pinky_num
           shift: [-0.5px, 0.5py]
         - ref: matrix_ring_num

@@ -20,3 +20,5 @@ result-*
 *.uf2
 
 *.zip
+keyboard-drc.rpt
+*.kicad_prl
