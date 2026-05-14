@@ -16,18 +16,22 @@ without repeating the work.
 From the repo root:
 
 ```sh
-nix develop -c kicad thenar/routed/keyboard.kicad_pcb
+nix develop -c pcbnew thenar/routed/keyboard.kicad_pcb
 ```
 
 That opens the committed (currently unrouted) PCB inside the flake's
-KiCad. If you want to start from a pristine scaffold instead — for
+KiCad. (We invoke `pcbnew` directly rather than the `kicad` launcher
+because ergogen doesn't emit a `.kicad_pro` project file — `pcbnew`
+opens the bare `.kicad_pcb` fine.)
+
+If you want to start from a pristine scaffold instead — for
 example, after editing `thenar/ergogen/config.yaml` — regenerate first:
 
 ```sh
 nix build .#scaffold
 cp result/pcbs/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
 chmod u+w thenar/routed/keyboard.kicad_pcb
-nix develop -c kicad thenar/routed/keyboard.kicad_pcb
+nix develop -c pcbnew thenar/routed/keyboard.kicad_pcb
 ```
 
 (`result/` is a symlink into `/nix/store`, which is read-only — that's
