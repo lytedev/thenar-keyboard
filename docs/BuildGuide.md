@@ -30,6 +30,28 @@ one or two more comprehensive guides on other keyboards first. A great one
 to start with is the Sofle guide:
 <https://josefadamcik.github.io/SofleKeyboard/build_guide_choc.html>
 
+## PCB routing (one-time, before you can order)
+
+> **⚠️ The committed PCB in `thenar/routed/` is currently a verbatim copy
+> of the ergogen scaffold — it has all the footprints placed but no copper
+> routing.** Building gerbers from it today produces an unfabricatable
+> board. Someone has to route the traces by hand in KiCad before any
+> useful gerbers can be produced. See `thenar/routed/README.md` for
+> current status.
+
+If you are the one doing the routing:
+
+```sh
+nix build .#scaffold
+# Open result/pcbs/keyboard.kicad_pcb in KiCad and route every net.
+# Save your routed version over thenar/routed/keyboard.kicad_pcb.
+# (Repeat for switchplate if any changes are needed.)
+nix flake check        # confirms footprint placement still matches the scaffold
+```
+
+If someone else has already routed and committed (the normal case once
+this stabilises): skip this section, go straight to ordering.
+
 ## Ordering PCBs
 
 Build the gerber zip from the flake:

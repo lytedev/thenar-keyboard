@@ -1,7 +1,6 @@
-output
-
-# ninja tmp files
-.ninja*
+# nix build symlinks
+result
+result-*
 
 # kicad tmp files
 */pcbs/source
@@ -18,5 +17,3 @@ output
 *.uf2
 
 *.zip
-
-node_modules

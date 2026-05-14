@@ -13,10 +13,12 @@
     {
       packages = forAllSystems (pkgs:
         let
-          # Run ergogen against thenar/ergogen/ and produce the full output tree
-          # (outlines/*.dxf, pcbs/keyboard.kicad_pcb, pcbs/switchplate.kicad_pcb, ...).
-          pcbs = pkgs.stdenvNoCC.mkDerivation {
-            name = "thenar-pcbs";
+          # Ergogen scaffold: footprints + nets, no copper routing.
+          # Used as the source of footprint placement that thenar/routed/ must match.
+          # NOT FAB-READY by itself - open in KiCad and route, or use .#gerbers
+          # (which builds from the committed routed PCB) instead.
+          scaffold = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-scaffold";
             src = ./thenar/ergogen;
             nativeBuildInputs = [ pkgs.ergogen ];
             buildPhase = ''
@@ -28,21 +30,25 @@
             dontInstall = true;
           };
 
-          # Export gerbers + drill files from the generated keyboard PCB.
+          # The hand-routed PCBs live in-tree. Gerbers are built from these, not
+          # from the ergogen scaffold (which has no traces).
+          routedKeyboard = ./thenar/routed/keyboard.kicad_pcb;
+          routedSwitchplate = ./thenar/routed/switchplate.kicad_pcb;
+
           gerbers = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-gerbers";
-            src = pcbs;
             nativeBuildInputs = [ pkgs.kicad ];
+            dontUnpack = true;
             buildPhase = ''
               runHook preBuild
               mkdir -p $out
               kicad-cli pcb export gerbers \
                 --subtract-soldermask \
                 -l "F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts" \
-                pcbs/keyboard.kicad_pcb -o $out
+                ${routedKeyboard} -o $out
               kicad-cli pcb export drill \
                 --generate-map --map-format gerberx2 --excellon-separate-th \
-                pcbs/keyboard.kicad_pcb -o $out/
+                ${routedKeyboard} -o $out/
               runHook postBuild
             '';
             dontInstall = true;
@@ -61,25 +67,59 @@
             dontInstall = true;
           };
 
-          # Export the switchplate as a STEP model with a 1.2mm thickness.
           switchplate-step = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-switchplate.step";
-            src = pcbs;
             nativeBuildInputs = [ pkgs.kicad ];
+            dontUnpack = true;
             buildPhase = ''
               runHook preBuild
               mkdir -p $out
-              kicad-cli pcb export step pcbs/switchplate.kicad_pcb -o $out/switchplate.step
+              kicad-cli pcb export step ${routedSwitchplate} -o $out/switchplate.step
               sed -i -e "s/1\.6)/1.2)/g" $out/switchplate.step
+              runHook postBuild
+            '';
+            dontInstall = true;
+          };
+
+          # Verify that the routed PCB's footprint placement matches the current
+          # ergogen scaffold. If you edit thenar/ergogen/config.yaml without
+          # re-merging into thenar/routed/, this check fails.
+          check-routing-drift = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-check-routing-drift";
+            nativeBuildInputs = [ pkgs.kicad pkgs.diffutils ];
+            dontUnpack = true;
+            buildPhase = ''
+              runHook preBuild
+              kicad-cli pcb export pos ${scaffold}/pcbs/keyboard.kicad_pcb \
+                -o ergogen.csv --format csv --units mm --side both
+              kicad-cli pcb export pos ${routedKeyboard} \
+                -o routed.csv --format csv --units mm --side both
+              sort ergogen.csv > ergogen.sorted.csv
+              sort routed.csv > routed.sorted.csv
+              if ! diff -u ergogen.sorted.csv routed.sorted.csv; then
+                echo ""
+                echo "ERROR: footprint placement in thenar/routed/keyboard.kicad_pcb"
+                echo "does not match the current ergogen output."
+                echo ""
+                echo "Re-run 'nix build .#pcbs' and merge the new placement into"
+                echo "thenar/routed/keyboard.kicad_pcb in KiCad before building gerbers."
+                exit 1
+              fi
+              mkdir -p $out
+              cp ergogen.sorted.csv $out/placement.csv
               runHook postBuild
             '';
             dontInstall = true;
           };
         in
         {
-          inherit pcbs gerbers gerbers-zip switchplate-step;
-          default = pcbs;
+          inherit scaffold gerbers gerbers-zip switchplate-step check-routing-drift;
+          default = gerbers-zip;
         });
+
+      checks = forAllSystems (pkgs: {
+        routing-drift = self.packages.${pkgs.system}.check-routing-drift;
+      });
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {

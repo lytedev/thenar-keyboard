@@ -27,21 +27,50 @@ ZMK module does not cover the extra num-row key on the outermost column.
 
 ## Development
 
-Everything builds through Nix flake packages. From the repo root:
+The build has two phases:
+
+1. **Ergogen produces a scaffold** — KiCad PCBs with all the footprints
+   placed and nets assigned, but **no copper routing**. This is the
+   starting point.
+2. **A human routes the scaffold in KiCad by hand** and commits the
+   result to `thenar/routed/`. Gerbers are then exported from the
+   committed routed file, not from the ergogen scaffold.
+
+This is unavoidable: ergogen is a layout generator, not an autorouter, and
+a useful keyboard PCB needs every net wired up by hand to fit two layers.
+
+### Flake packages
 
 ```sh
-nix build .#pcbs              # ergogen -> KiCad PCBs + DXF outlines
-nix build .#gerbers           # kicad-cli -> gerber + drill files
-nix build .#gerbers-zip       # zipped gerbers for fab houses (e.g. JLCPCB)
+nix build .#scaffold          # ergogen -> KiCad PCBs (UNROUTED, for hand-routing)
+nix build .#gerbers           # gerbers from thenar/routed/keyboard.kicad_pcb
+nix build .#gerbers-zip       # ^^ zipped, ready to upload to JLCPCB etc. (default)
 nix build .#switchplate-step  # STEP model of the switchplate (1.2mm)
+nix flake check               # verifies thenar/routed/ placement matches scaffold
 ```
 
-Each `result` symlink points at the artifact in `/nix/store`. For an interactive
-shell with `ergogen`, `kicad-cli`, and `zip` available:
+Each `result` symlink points at the artifact in `/nix/store`. For an
+interactive shell with `ergogen`, `kicad-cli`, and `zip` available:
 
 ```sh
 nix develop
 ```
+
+### The two paths to fab-ready gerbers
+
+- **Use the committed routed PCB.** `nix build .#gerbers-zip` and upload
+  the result. This is the default path and the only one that has a chance
+  of working without you doing any routing yourself.
+- **Route your own.** Run `nix build .#scaffold`, open
+  `result/pcbs/keyboard.kicad_pcb` in KiCad, route every net, save the
+  routed file over `thenar/routed/keyboard.kicad_pcb`, then
+  `nix build .#gerbers-zip`. If you fork the repo, commit your routed
+  PCB so anyone using your fork gets it for free.
+
+`nix flake check` runs `check-routing-drift`, which compares footprint
+placement between the freshly-generated scaffold and the committed
+`thenar/routed/` PCB. If you edit `thenar/ergogen/config.yaml` without
+re-merging into the routed file, this check will fail loudly.
 
 ## License
 
