@@ -491,119 +491,27 @@ pcbs:
           shift: [-8.9, -2.5]
           rotate: 180
       niceview:
-        what: niceview
+        # ceoloide's display_nice_view footprint - one net per pad, generates
+        # its own reversibility jumpers internally. This replaces the old
+        # corax-style "two pads numbered 1 with different nets" pattern,
+        # which produced DRC shorting_items errors that blocked Specctra DSN
+        # export and therefore freerouting.
+        what: display_nice_view
         where: mcu
         adjust:
-          shift: [20.5, 0]
-          rotate: 180
+          # See thenar/scripts/niceview_placement.py - that script solves
+          # for these values so ceoloide's pads land on the exact same
+          # absolute positions the old corax-style niceview occupied.
+          shift: [37.2, 0]
+          rotate: -90
         params:
-          outline: true
           side: 'F'
-          SDA: NN_SDA_CS
-          SCL: NN_SCL_GND
-          VCC: NN_VCC
-          GND: NN_GND_SCL
-          CS: NN_CS_SDA
-      jumper_nv_left_sda:
-        what: jumper
-        where: mcu
-        params:
-          from: SDA
-          to: NN_SDA_CS
-          side: B
-        adjust:
-          shift: [20.50-2.5, -5.08]
-          rotate: -90
-      jumper_nv_left_scl:
-        what: jumper
-        where: mcu
-        params:
-          from: SCL
-          to: NN_SCL_GND
-          side: B
-        adjust:
-          shift: [20.50-2.5, -2.54]
-          rotate: -90
-      jumper_nv_left_vcc:
-        what: jumper
-        where: mcu
-        params:
-          from: VCC
-          to: NN_VCC
-          side: B
-        adjust:
-          shift: [20.50-2.5, 0]
-          rotate: -90
-      jumper_nv_left_gnd:
-        what: jumper
-        where: mcu
-        params:
-          from: GND
-          to: NN_GND_SCL
-          side: B
-        adjust:
-          shift: [20.50-2.5, 2.54]
-          rotate: -90
-      jumper_nv_left_cs:
-        what: jumper
-        where: mcu
-        params:
-          from: CS
-          to: NN_CS_SDA
-          side: B
-        adjust:
-          shift: [20.50-2.5, 5.08]
-          rotate: -90
-      jumper_nv_right_sda:
-        what: jumper
-        where: mcu
-        params:
-          from: SDA
-          to: NN_CS_SDA
-          side: F
-        adjust:
-          shift: [20.50-2.5, 5.08]
-          rotate: -90
-      jumper_nv_right_scl:
-        what: jumper
-        where: mcu
-        params:
-          from: SCL
-          to: NN_GND_SCL
-          side: F
-        adjust:
-          shift: [20.50-2.5, 2.54]
-          rotate: -90
-      jumper_nv_right_vcc:
-        what: jumper
-        where: mcu
-        params:
-          from: VCC
-          to: NN_VCC
-          side: F
-        adjust:
-          shift: [20.50-2.5, 0]
-          rotate: -90
-      jumper_nv_right_gnd:
-        what: jumper
-        where: mcu
-        params:
-          from: GND
-          to: NN_SCL_GND
-          side: F
-        adjust:
-          shift: [20.50-2.5, -2.54]
-          rotate: -90
-      jumper_nv_right_cs:
-        what: jumper
-        where: mcu
-        params:
-          from: CS
-          to: NN_SDA_CS
-          side: F
-        adjust:
-          shift: [20.50-2.5, -5.08]
-          rotate: -90
+          reversible: true
+          MOSI: SDA  # Nice!View MOSI pin = our SDA net (named historically)
+          SCK: SCL   # Nice!View SCK pin = our SCL net
+          VCC: VCC
+          GND: GND
+          CS: CS
       slider:
         what: slider_reversible
         where: mcu
