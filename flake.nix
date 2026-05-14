@@ -13,18 +13,28 @@
     {
       packages = forAllSystems (pkgs:
         let
-          # Ergogen scaffold: footprints + nets, no copper routing.
-          # Used as the source of footprint placement that thenar/routed/ must match.
-          # NOT FAB-READY by itself - open in KiCad and route, or use .#gerbers
-          # (which builds from the committed routed PCB) instead.
+          # Python wrapper that can `import pcbnew`. KiCad ships its Python
+          # module under kicad-base/lib/python3.13/site-packages; this wrapper
+          # exposes that to a vanilla python3 interpreter.
+          kicadPython = pkgs.writeShellScriptBin "kicad-python" ''
+            export PYTHONPATH="${pkgs.kicad.base}/lib/python3.13/site-packages''${PYTHONPATH:+:$PYTHONPATH}"
+            exec ${pkgs.python313}/bin/python3 "$@"
+          '';
+
+          # Ergogen scaffold + project file generation. NOT FAB-READY by itself:
+          # this has footprints + nets but no copper traces. Open the resulting
+          # .kicad_pro in KiCad and route, or use .#gerbers (which builds from
+          # the committed routed PCB) instead.
           scaffold = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-scaffold";
-            src = ./thenar/ergogen;
-            nativeBuildInputs = [ pkgs.ergogen ];
+            src = ./thenar;
+            nativeBuildInputs = [ pkgs.ergogen pkgs.python313 ];
             buildPhase = ''
               runHook preBuild
               mkdir -p $out
-              ergogen . -o $out
+              ergogen ./ergogen -o $out
+              python3 ./scripts/write_kicad_pro.py $out/pcbs/keyboard.kicad_pcb
+              python3 ./scripts/write_kicad_pro.py $out/pcbs/switchplate.kicad_pcb
               runHook postBuild
             '';
             dontInstall = true;
@@ -101,8 +111,8 @@
                 echo "ERROR: footprint placement in thenar/routed/keyboard.kicad_pcb"
                 echo "does not match the current ergogen output."
                 echo ""
-                echo "Re-run 'nix build .#pcbs' and merge the new placement into"
-                echo "thenar/routed/keyboard.kicad_pcb in KiCad before building gerbers."
+                echo "Re-run 'nix build .#scaffold' and merge the new placement"
+                echo "into thenar/routed/ in KiCad before building gerbers."
                 exit 1
               fi
               mkdir -p $out
@@ -113,7 +123,8 @@
           };
         in
         {
-          inherit scaffold gerbers gerbers-zip switchplate-step check-routing-drift;
+          inherit scaffold gerbers gerbers-zip switchplate-step
+                  check-routing-drift kicadPython;
           default = gerbers-zip;
         });
 
@@ -127,6 +138,8 @@
             ergogen
             kicad
             zip
+            python313
+            self.packages.${pkgs.system}.kicadPython
           ];
         };
       });
