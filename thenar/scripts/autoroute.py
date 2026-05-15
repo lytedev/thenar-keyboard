@@ -148,17 +148,28 @@ def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
         #                  each pass - reduces churn
         print(f"[autoroute] running freerouting ({passes} passes, global+sequential) ...",
               flush=True)
-        subprocess.run(
-            [
-                "freerouting",
-                "-de", str(dsn),
-                "-do", str(ses),
-                "-mp", str(passes),
-                "-us", "Global",
-                "-is", "Sequential",
-            ],
-            check=True,
-        )
+        # freerouting v2.2.1 has no -da/--no-analytics flag and retries failed
+        # analytics POSTs for ~60 minutes per cycle if the endpoint is
+        # unreachable. Cap the whole subprocess at 2x the expected runtime
+        # (passes * ~30s/pass + 5min slack) so we exit cleanly instead of
+        # hanging.
+        timeout = passes * 60 + 300
+        try:
+            subprocess.run(
+                [
+                    "freerouting",
+                    "-de", str(dsn),
+                    "-do", str(ses),
+                    "-mp", str(passes),
+                    "-us", "Global",
+                    "-is", "Sequential",
+                ],
+                check=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"warning: freerouting hit {timeout}s timeout; using SES if any",
+                  file=sys.stderr)
         if not ses.is_file():
             print(f"error: freerouting did not produce {ses}", file=sys.stderr)
             return 1
