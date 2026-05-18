@@ -1,0 +1,61 @@
+#include "thenar.dtsi"
+
+&physical_layout0 {
+    kscan = <&kscan0>;
+    transform = <&default_transform>;
+};
+
+&kscan0 {
+    diode-direction = "col2row";
+
+    // "Matrix columns" in ZMK terms (driven outputs). These are the col0..col4
+    // nets in the ergogen config (one per matrix row: num/top/home/bottom/mod).
+    row-gpios
+        = <&pro_micro 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col0 (num)
+        , <&pro_micro 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col1 (top)
+        , <&pro_micro 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col2 (home)
+        , <&pro_micro 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col3 (bottom)
+        , <&pro_micro 9 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col4 (mod + thumb + scrollwheel)
+        ;
+
+    // "Matrix rows" in ZMK terms (sensed inputs). These are the row0..row5
+    // nets (one per keyboard column: outer/pinky/ring/middle/index/inner).
+    col-gpios
+        = <&pro_micro 19 GPIO_ACTIVE_HIGH>  // row0 (outer)
+        , <&pro_micro 18 GPIO_ACTIVE_HIGH>  // row1 (pinky)
+        , <&pro_micro 15 GPIO_ACTIVE_HIGH>  // row2 (ring)
+        , <&pro_micro 14 GPIO_ACTIVE_HIGH>  // row3 (middle)
+        , <&pro_micro 16 GPIO_ACTIVE_HIGH>  // row4 (index)
+        , <&pro_micro 10 GPIO_ACTIVE_HIGH>  // row5 (inner)
+        ;
+};
+
+&encoder_left {
+    status = "okay";
+};
+
+&pinctrl {
+    spi0_default: spi0_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+                <NRF_PSEL(SPIM_MOSI, 0, 17)>,
+                <NRF_PSEL(SPIM_MISO, 0, 25)>;
+        };
+    };
+    spi0_sleep: spi0_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+                <NRF_PSEL(SPIM_MOSI, 0, 17)>,
+                <NRF_PSEL(SPIM_MISO, 0, 25)>;
+            low-power-enable;
+        };
+    };
+};
+
+nice_view_spi: &spi0 {
+    compatible = "nordic,nrf-spim";
+    pinctrl-0 = <&spi0_default>;
+    pinctrl-1 = <&spi0_sleep>;
+    pinctrl-names = "default", "sleep";
+    cs-gpios = <&pro_micro 4 GPIO_ACTIVE_HIGH>;
+};

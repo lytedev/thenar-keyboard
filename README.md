@@ -16,10 +16,11 @@ TODO: Take photos of the assembled Thenar and add them here.
 
 ## Firmware
 
-Natively supports [ZMK](https://zmk.dev/).
-
-TODO: Fork/create a ZMK config + module for the Thenar layout. The old Corax
-ZMK module does not cover the extra num-row key on the outermost column.
+Natively supports [ZMK](https://zmk.dev/). The shield module is in
+[`firmware/`](./firmware/) and the default keymap there is sufficient
+to flash a freshly-built keyboard for a first smoke test. Fork into a
+personal ZMK config repo for real keymap work — see `firmware/README.md`
+for the west.yml wiring.
 
 ## Build guide
 

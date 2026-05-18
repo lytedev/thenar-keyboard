@@ -32,6 +32,11 @@ A 56-key column-staggered split keyboard with scrollwheels. 28 keys per half (5Ã
 
 ## Firmware
 
-TODO: Create a ZMK config repository for Thenar and link it here.
+A ZMK shield module ships in this repo at [`firmware/`](../firmware/).
+See `firmware/README.md` for how to wire it into your personal
+ZMK config. The module defines the matrix, encoder, and display
+hardware; the default keymap is minimal QWERTY for first-flash
+verification â€” you'll want to fork it into a separate config repo
+and customise.
 
 
