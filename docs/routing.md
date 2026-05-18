@@ -168,28 +168,94 @@ through freerouting and produces a kicad_pcb with traces:
 nix build .#routed-auto
 # inspect:
 nix develop -c pcbnew result/keyboard.kicad_pcb
-# accept:
+# accept (replaces the committed hand-routed PCB):
 cp result/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
 chmod u+w thenar/routed/keyboard.kicad_pcb
 ```
 
-By default 50 passes (~25 min). The result is NOT used by `.#gerbers`
-automatically — that still reads `thenar/routed/`, so you have to copy
-the autoroute output over the committed file if you want it to ship.
-This guards against an autoroute regression silently replacing a careful
-hand-routed PCB.
+`.#gerbers` always reads `thenar/routed/`, never the autoroute output
+directly — so you can experiment with `.#routed-auto` without
+clobbering a careful hand-routed PCB until you explicitly copy over.
 
-Implementation lives in `thenar/scripts/autoroute.py`. Two gotchas:
+### What to expect
 
-- KiCad's Specctra DSN exporter chokes on a few ergogen-generated
-  footprints: `text.js` has zero pads, and `battery.js` reuses a confusing
-  module name. The script strips those before DSN export and re-applies
-  the routing to the original (untouched) board via SES import.
-- The reversible-PCB pattern still creates "shared copper" hybrid nets
-  around the MCU and scrollwheel jumpers. Freerouting routes them anyway
-  but generally leaves a handful of nets unrouted in the densest areas.
-  How close `.#routed-auto` gets to 100% is design-dependent — see the
-  pass count in `flake.nix` if you want to crank it up.
+On this design, freerouting gets to **~91% routed** and plateaus there.
+A typical run leaves **~23 unrouted nets** in:
+
+- **`col4`** — the mod-row net, which spans nearly the full width of the
+  board (thumb cluster → mod-row switches → scrollwheel → Nice!Nano).
+- **Other matrix rows/cols** (`row1`, `row2`, `outer_*`, `layer_cluster`,
+  `index_mod`, etc.) where freerouting can't find a 2-layer path under
+  the GND zone and around the Nice!Nano.
+- **`sw_a`/`sw_b`/`sw_c`/`sw_d`** — short 2 mm hops between the encoder
+  pads and their adjacent jumper pads, blocked by freerouting's
+  conservative pad-clearance handling.
+
+Freerouting also uses dramatically fewer vias than a human router. On
+one comparison run: human used **102 vias**, autoroute used **43**. The
+autoroute "goes around" obstacles where a human would "drop a via, run
+under, come back up." This is the root reason it can't close the last
+9% — the score function penalises vias more than it values connectivity.
+
+### Tuning
+
+`thenar/scripts/freerouting.json` is freerouting's config. Notable knobs:
+
+- `router.scoring.via_costs` — lower = more vias allowed. We set this to
+  10 (default 50); does help marginally but doesn't change the fundamental
+  bias.
+- `usage_and_diagnostic_data.disable_analytics: true` — prevents
+  freerouting from retrying its 501-returning telemetry endpoint for an
+  hour after each run. Keep this on.
+
+Implementation gotchas in `thenar/scripts/autoroute.py`:
+
+- KiCad's Specctra DSN exporter chokes on `text.js` (zero pads) and
+  `battery.js` (reused module name). The script strips both before DSN
+  export and re-applies routing to the original board via SES import.
+- The `(plane GND ...)` block KiCad emits for our GND zone makes
+  freerouting treat the entire board as solid copper. We strip those
+  plane declarations from the DSN.
+- nixpkgs ships freerouting 2.2.1, which has a multithreaded race that
+  crashes pass #1. The flake bypasses that by fetching v2.2.4 directly
+  and wrapping it with `temurin-jre-bin-25`. Drop when nixpkgs catches
+  up.
+- Single-threaded (`-mt 1`) is used because v2.2.4 multithreaded mode
+  doesn't fire its "stop on score plateau" heuristic and runs forever.
+
+### Hybrid workflow (the realistic path)
+
+The intended workflow given the above:
+
+```sh
+# 1. Generate an autoroute starting point (~5 min).
+nix build .#routed-auto
+cp result/keyboard.kicad_pcb /tmp/finish-routing/
+chmod u+w /tmp/finish-routing/keyboard.kicad_pcb
+
+# 2. Open in pcbnew and finish the ~25 remaining nets by hand.
+#    Highlight unrouted via Inspect -> Design Rules Checker -> Unconnected
+#    Items tab. Each entry has a "Go to location" button.
+nix develop -c pcbnew /tmp/finish-routing/keyboard.kicad_pcb
+
+# 3. When DRC reports 0 unconnected, copy over the committed PCB.
+cp /tmp/finish-routing/keyboard.kicad_pcb thenar/routed/keyboard.kicad_pcb
+```
+
+### Comparing routings
+
+`thenar/scripts/compare_routing.py` reports per-net length and via diff
+between two routed PCBs. Useful for A/B-ing autoroute settings or
+comparing your routing against an autoroute baseline:
+
+```sh
+nix develop -c kicad-python thenar/scripts/compare_routing.py \
+    thenar/routed/keyboard.kicad_pcb /tmp/finish-routing/keyboard.kicad_pcb
+```
+
+Output columns are per-net: pad count, golden vs candidate trace mm,
+via counts on each side. Sorted by candidate-minus-golden so the worst
+deltas float to the top.
 
 ## Further reading
 
