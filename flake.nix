@@ -21,6 +21,20 @@
             exec ${pkgs.python313}/bin/python3 "$@"
           '';
 
+          # nixpkgs ships freerouting 2.2.1, which has a multithreaded race that
+          # crashes pass #1 with a NullPointerException on our DSN. v2.2.4
+          # ships several stability fixes upstream; pull the JAR directly and
+          # wrap it. Drop this when nixpkgs updates.
+          freeroutingJar = pkgs.fetchurl {
+            url = "https://github.com/freerouting/freerouting/releases/download/v2.2.4/freerouting-2.2.4.jar";
+            hash = "sha256-9e03QYKQDMx45HNRi7ufa4afSgcVlJX2Y6dvUrsQUjs=";
+          };
+          # Need full JRE (not jre25_minimal) - freerouting references
+          # javax.swing classes even in CLI mode.
+          freerouting = pkgs.writeShellScriptBin "freerouting" ''
+            exec ${pkgs.temurin-jre-bin-25}/bin/java -jar ${freeroutingJar} "$@"
+          '';
+
           # Ergogen scaffold + project file generation. NOT FAB-READY by itself:
           # this has footprints + nets but no copper traces. Open the resulting
           # .kicad_pro in KiCad and route, or use .#gerbers (which builds from
@@ -69,7 +83,7 @@
           routed-auto = pkgs.stdenvNoCC.mkDerivation {
             name = "thenar-routed-auto";
             src = ./thenar;
-            nativeBuildInputs = [ pkgs.kicad kicadPython pkgs.freerouting ];
+            nativeBuildInputs = [ pkgs.kicad kicadPython freerouting ];
             buildPhase = ''
               runHook preBuild
               export HOME=$(mktemp -d)
@@ -165,7 +179,7 @@
         in
         {
           inherit scaffold gerbers gerbers-zip switchplate-step
-                  check-routing-drift kicadPython routed-auto;
+                  check-routing-drift kicadPython routed-auto freerouting;
           default = gerbers-zip;
         });
 
@@ -181,6 +195,7 @@
             zip
             python313
             self.packages.${pkgs.system}.kicadPython
+            self.packages.${pkgs.system}.freerouting
           ];
         };
       });

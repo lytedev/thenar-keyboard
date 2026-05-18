@@ -126,6 +126,17 @@ def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
         dsn = tmp / "board.dsn"
         ses = tmp / "board.ses"
 
+        # freerouting v2.x reads its config from ~/.freerouting/freerouting.json
+        # (or /tmp/freerouting/freerouting.json on systems without HOME). Drop
+        # our overrides (cheap vias, disable_analytics, multi_threading: false)
+        # there before launching. Both locations are tried.
+        config_src = Path(__file__).parent / "freerouting.json"
+        if config_src.is_file():
+            content = config_src.read_text()
+            for d in [Path.home() / ".freerouting", Path("/tmp/freerouting")]:
+                d.mkdir(parents=True, exist_ok=True)
+                (d / "freerouting.json").write_text(content)
+
         # Phase 1: DSN export (subprocess).
         print(f"[autoroute] exporting DSN ...", flush=True)
         result = subprocess.run(
@@ -148,12 +159,11 @@ def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
         #                  each pass - reduces churn
         print(f"[autoroute] running freerouting ({passes} passes, global+sequential) ...",
               flush=True)
-        # freerouting v2.2.1 has no -da/--no-analytics flag and retries failed
-        # analytics POSTs for ~60 minutes per cycle if the endpoint is
-        # unreachable. Cap the whole subprocess at 2x the expected runtime
-        # (passes * ~30s/pass + 5min slack) so we exit cleanly instead of
-        # hanging.
-        timeout = passes * 60 + 300
+        # Wall-clock cap. v2.2.4 honours `disable_analytics: true` in the
+        # config so we no longer have to defend against hour-long telemetry
+        # retries, but it can still hang in optimizer passes near the end.
+        # Generous budget: 30s/pass + 5min slack + 10min optimizer tail.
+        timeout = passes * 30 + 300 + 600
         try:
             subprocess.run(
                 [
@@ -163,9 +173,15 @@ def orchestrate(input_pcb: Path, output_pcb: Path, passes: int) -> int:
                     "-mp", str(passes),
                     "-us", "Global",
                     "-is", "Sequential",
+                    # Single-threaded: v2.2.4 multithreaded mode doesn't fire
+                    # its "stop on no improvement" heuristic - just runs forever
+                    # past the plateau and never writes the SES. -mt 1 is only
+                    # ~10% slower per pass and DOES exit cleanly.
+                    "-mt", "1",
                 ],
                 check=True,
                 timeout=timeout,
+                cwd=str(tmp),  # freerouting picks up our freerouting.json from cwd
             )
         except subprocess.TimeoutExpired:
             print(f"warning: freerouting hit {timeout}s timeout; using SES if any",
