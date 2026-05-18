@@ -16,11 +16,17 @@ TODO: Take photos of the assembled Thenar and add them here.
 
 ## Firmware
 
-Natively supports [ZMK](https://zmk.dev/). The shield module is in
-[`firmware/`](./firmware/) and the default keymap there is sufficient
-to flash a freshly-built keyboard for a first smoke test. Fork into a
-personal ZMK config repo for real keymap work — see `firmware/README.md`
-for the west.yml wiring.
+Natively supports [ZMK](https://zmk.dev/). Build + flash via the flake:
+
+```sh
+nix build .#firmware             # both halves
+nix run .#flash -- left          # build + flash (double-tap reset when prompted)
+nix run .#flash -- right
+```
+
+The shield definition + default keymap live in [`config/`](./config/).
+See `config/README.md` for the full firmware development workflow,
+including hash-pinning the Zephyr SDK on first build.
 
 ## Build guide
 

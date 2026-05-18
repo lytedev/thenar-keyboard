@@ -1,4 +1,0 @@
-name: zmk-thenar
-build:
-  settings:
-    board_root: .

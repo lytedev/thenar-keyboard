@@ -1,11 +1,15 @@
 {
-  description = "Thenar keyboard - ergogen + KiCad build pipeline";
+  description = "Thenar keyboard - ergogen + KiCad build pipeline + ZMK firmware";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    zmk-nix = {
+      url = "github:lilyinstarlight/zmk-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, zmk-nix }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f (import nixpkgs { inherit system; }));
@@ -176,12 +180,78 @@
             '';
             dontInstall = true;
           };
+
+          # ZMK firmware build. zmk-nix's buildSplitKeyboard handles the
+          # zephyr SDK + west + arm-gcc plumbing; we just point it at our
+          # shield + west manifest under config/.
+          #
+          # First build will fail with a hash mismatch - paste the hash nix
+          # reports into zephyrDepsHash below and rebuild.
+          firmware = zmk-nix.legacyPackages.${pkgs.system}.buildSplitKeyboard {
+            name = "thenar-firmware";
+            src = nixpkgs.lib.sourceFilesBySuffices self [
+              ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+              ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig"
+            ];
+            board = "nice_nano";
+            shield = "thenar_%PART%";
+            zephyrDepsHash = "sha256-emLUrBuHwtniwD7dtJBOkZwaltHz/n1OCJ35mxY7t38=";
+          };
+
+          firmware-left = pkgs.runCommand "thenar-left.uf2" { } ''
+            cp ${firmware}/zmk_left.uf2 $out
+          '';
+          firmware-right = pkgs.runCommand "thenar-right.uf2" { } ''
+            cp ${firmware}/zmk_right.uf2 $out
+          '';
+
+          # `nix run .#flash -- left` or `... -- right` builds the firmware
+          # for the requested half, then waits for a Nice!Nano to mount in
+          # bootloader mode and copies the .uf2 onto it. Convenience over
+          # zmk-nix's generic flash helper because we want left/right args.
+          flash = pkgs.writeShellApplication {
+            name = "flash";
+            runtimeInputs = [ pkgs.util-linux pkgs.coreutils ];
+            text = ''
+              set -euo pipefail
+              if [ "$#" -ne 1 ] || ! [[ "$1" =~ ^(left|right)$ ]]; then
+                echo "usage: nix run .#flash -- (left|right)" >&2
+                exit 2
+              fi
+              part=$1
+              uf2=${firmware}/zmk_$part.uf2
+              if [ ! -f "$uf2" ]; then
+                echo "error: $uf2 not found - did the build succeed?" >&2
+                exit 1
+              fi
+              echo "[flash] firmware ready: $uf2"
+              echo "[flash] double-tap reset on the $part-hand Nice!Nano now."
+              echo "[flash] waiting for NICENANO mass-storage to appear..."
+              while :; do
+                mount=$(lsblk -o LABEL,MOUNTPOINT -nr | awk '$1=="NICENANO" {print $2; exit}')
+                if [ -n "$mount" ]; then break; fi
+                sleep 1
+              done
+              echo "[flash] mounted at $mount; copying..."
+              cp "$uf2" "$mount/"
+              sync
+              echo "[flash] done. The Nice!Nano will reboot and unmount automatically."
+            '';
+          };
         in
         {
           inherit scaffold gerbers gerbers-zip switchplate-step
-                  check-routing-drift kicadPython routed-auto freerouting;
+                  check-routing-drift kicadPython routed-auto freerouting
+                  firmware firmware-left firmware-right flash;
           default = gerbers-zip;
         });
+
+      apps = forAllSystems (pkgs: {
+        flash = {
+          type = "app";
+          program = "${self.packages.${pkgs.system}.flash}/bin/flash";
+        };
+      });
 
       checks = forAllSystems (pkgs: {
         routing-drift = self.packages.${pkgs.system}.check-routing-drift;
