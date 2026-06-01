@@ -42,22 +42,36 @@ Cost delta: separate designs are ~$50-80 more for the first PCBA run
 (two design setups vs one), but save iteration time and unlock smaller
 per-half boards. Net win after the first revision.
 
-### MCU: nRF52840 (bare chip)
+### MCU: MS88SF3 nRF52840 module (not bare chip)
 
-- LCSC part: `C840628` (Nordic, available, "Basic" tier on JLCPCB)
-- Same chip the Nice!Nano uses; ZMK upstream supports it.
-- Needs: 32 MHz crystal + 2× 12 pF caps, 32.768 kHz crystal + caps,
-  decoupling network (5× 100 nF + 1× 4.7 µF), DCDC inductors per
-  Nordic reference design.
+**Revised from bare chip.** Use the Minew **MS88SF3-nRF52840** module
+(LCSC `C20416747`, Extended). It's the nRF52840 + 32 MHz crystal +
+32.768 kHz crystal + antenna + matching network + decoupling network
+all in one pre-certified SMD package.
 
-### Antenna: chip antenna
+Why pick the module:
 
-- Recommended: **Johanson `2450AT18B100E`** (2.45 GHz chip antenna,
-  surface-mount).
-- LCSC: `C503520` (verify before order).
-- Layout: requires only a short trace from the nRF52840 ANT pin and a
-  ground keep-out under the antenna. Much more forgiving than PCB
-  trace antennas; trades ~$0.30/board for "it just works."
+- **Same chip, same power**: ~1.5 µA System OFF, identical to bare
+  nRF52840. ZMK upstream supports it as `nice_nano` or similar board.
+- **Lower BOM complexity**: replaces ~10-15 discrete parts (two
+  crystals, four crystal caps, RF matching components, antenna, two
+  DCDC inductors).
+- **Lower Extended-fee burden**: one Extended setup instead of
+  separate fees for the nRF52840, antenna, and assorted RF passives.
+- **Pre-certified for BLE**: saves the FCC certification work if this
+  ever goes commercial. (Doesn't affect a personal-use build, but
+  removes a future barrier.)
+- **De-risked RF**: the hardest design risk in v1 was getting the
+  antenna match and crystal layout right. The module eliminates both.
+
+Trade-offs:
+- Physical: ~18×10 mm vs the bare chip's 6×6 mm. Plenty of board space
+  for our purpose.
+- Slightly higher per-unit cost ($1-3) than the bare chip — paid back
+  by the BOM/setup-fee savings.
+
+No discrete crystals, no discrete antenna, no DCDC inductors. The
+module exposes the nRF52840 GPIO pins as castellated edge pads.
 
 ### I/O expanders: 2× MCP23017 per half
 
@@ -87,12 +101,18 @@ ecosystem and better Zephyr driver support, so it's the safer pick.
 ### Power path
 
 - **Battery in**: LiPo 3.7V nominal, same `301230` as rc1.
-- **Charge IC**: MCP73831 (LCSC `C424093`) — 500 mA charge, single-cell.
+- **Charge IC**: **TP4056** (LCSC `C382139`, Extended) — 100-1000 mA
+  programmable charge, single-cell. Functionally equivalent to
+  MCP73831 (which we'd otherwise use), cheaper. Set charge current to
+  ~100 mA via 12 kΩ on the PROG pin (good rate for our 110 mAh
+  battery; faster damages cell life).
 - **Regulation**: Nordic nRF52840 can run directly from LiPo voltage
   via its built-in DCDC (1.7–5.5 V input range). No boost/buck needed
   for the MCU itself.
-- **3.3V rail** for MCP23017 + Nice!View: TLV70233 LDO (`C144586`)
-  fed from battery. Tiny load (few mA peak) so a small LDO is fine.
+- **3.3V rail** for MCP23017 + Nice!View: **XC6206P332MR** LDO
+  (`C5446`, **Basic tier**) fed from battery. 1-3 µA quiescent current
+  (~10× lower than TLV70233's 31 µA — meaningful on a 110 mAh battery).
+  Saves the Extended setup fee.
 - **Slider switch**: Same C128955 cuts the battery feed to charge+MCU.
 - **Charge LED**: optional, 1× 0603 LED + 1 kΩ resistor wired to
   MCP73831's STAT pin.
@@ -164,24 +184,26 @@ Per half (multiply ×2 for the keyboard total). "B" = Basic, "E" = Extended.
 
 | Designator | Part | LCSC | Tier | Notes |
 |---|---|---|---|---|
-| U1 | nRF52840-QIAA-R MCU | **C190794** | E | The MCU. No Basic option. |
-| E1 | Johanson 2450AT18B100E chip antenna | **C2917717** | E | 2.45 GHz |
-| U2, U3 | MCP23017-E/SO I/O expander | **C47023** | E | SOIC-28; SOP variant |
-| U4 | MCP73831T-2ACI/OT charge IC | C424093 | E | LiPo charge, 500 mA |
-| U5 | TLV70233DBVT 3.3 V LDO | **C110287** | E | SOT-23-5 |
-| U6 | USBLC6-2SC6 USB ESD | C7519 | E | SOT-23-6 |
+| U1 | MS88SF3 nRF52840 module | **C20416747** | E | Pre-certified; includes antenna, crystals, RF matching, DCDC inductors |
+| U2, U3 | MCP23017-E/SO I/O expander | C47023 | E | SOIC-28 (SOP variant) |
+| U4 | TP4056 LiPo charge IC | **C382139** | E | Programmable charge current via PROG resistor |
+| U5 | XC6206P332MR 3.3 V LDO | **C5446** | **B** | 1-3 µA Iq; replaces TLV70233 — Basic tier, biggest cost+power win |
+| U6 | USBLC6-2SC6 USB ESD | C7519 | E | Optional — nRF52840 has integrated USB ESD diodes. Skip if BOM cost matters more than belt-and-suspenders. |
 | J1 | TYPE-C-31-M-12 USB-C receptacle | C165948 | E | Hroparts |
-| Y1 | NDK NX2016SA 32 MHz crystal, 9 pF load | **C843260** | E | No Basic option |
-| Y2 | Epson Q13FC13500004 32.768 kHz crystal | C32346 | **B** | Watch crystal |
-| C1–C4 | 22 pF C0G 0603 cap | C1653 | B | Crystal load caps |
-| C5 | 4.7 µF X5R 0603 cap | C19666 | B | Bulk decoupling |
-| C6–C15 | 100 nF X7R 0603 cap | C14663 | B | Local decoupling |
-| L1, L2 | 10 µH 0603 inductor | **C1035** | B | Sunlord SDFL1608S100KTF |
+| C1 | 4.7 µF X5R 0603 cap | C19666 | B | Bulk decoupling |
+| C2–C8 | 100 nF X7R 0603 cap | C14663 | B | Local decoupling (one per IC + USB-C + battery) |
+| C9, C10 | 10 µF X5R 0603 cap | (TBD) | B | Battery bulk + charge IC |
 | R1, R2 | 4.7 kΩ 0603 | C23162 | B | I²C pull-ups |
 | R3, R4 | 5.1 kΩ 0603 | C23186 | B | USB-C CC pull-downs |
-| R5–R7 | 1 kΩ 0603 | C21190 | B | Various |
+| R5 | 12 kΩ 0603 | C25744 | B | TP4056 PROG (sets 100 mA charge) |
+| R6, R7 | 1 kΩ 0603 | C21190 | B | Various |
 | R8, R9 | 100 kΩ 0603 | C25803 | B | Reset pull-ups |
-| D1 | 0805 red LED (status) | C84256 | B | If 0603 desired, use C12624 (Extended) |
+| D1 | 0805 red LED (status/charge) | C84256 | B | Connected to TP4056 STAT pins |
+
+**Removed from BOM** (handled inside the MS88SF3 module): bare
+nRF52840, 32 MHz crystal, 32.768 kHz crystal, four 22 pF crystal caps,
+two 10 µH DCDC inductors, chip antenna. That's ~7 fewer parts to place
+and ~3 fewer Extended setup fees.
 
 **Verification corrections from my first pass** (in case I need to
 re-do this with similar parts): all the original C-numbers I cited for
@@ -196,16 +218,25 @@ Through-hole / hand-soldered (unchanged from rc1):
 - 1× 5-pin Nice!View header (if displaying)
 - 2× battery solder pads
 
-**Rough cost per half**: ~$15-25 in components from LCSC + Extended
-setup fee (~$24 one-time across the BOM, **shared between left/right
-designs in the same order**) + ~$10-15 PCB + ~$25-40 PCBA labour. So
-roughly **$50-80 per half for the PCBA-assembled board**, plus the
-through-hole BOM (switches/keycaps still ~$50-80 total).
+**Rough cost per half (post-optimization)**: ~$10-18 in components +
+Extended setup fee (~$15 one-time across the BOM thanks to the LDO
+swap + module consolidation; ~$9 savings vs the unoptimized BOM) +
+~$10-15 PCB + ~$25-40 PCBA labour. So roughly **$45-75 per half** for
+the assembled board, plus the unchanged through-hole BOM.
 
 Two designs (left + right) in the same JLCPCB order share the Extended
-fees, so total project cost is roughly $100-160 for both halves' bare
-assembled boards on first order, then ~$60-100 per pair on revisions
-(setup fees amortised, just paying parts + assembly).
+fees: total project cost roughly **$90-150** for both halves on first
+order, ~$55-90 per pair on revisions.
+
+Savings tally vs the original BOM:
+- XC6206 LDO: -$3 Extended fee + -$0.17 piece price + ~10× lower Iq
+- MS88SF3 module: -3 Extended fees (crystals, antenna, nRF52840) + -7
+  parts to place + zero RF design risk
+- TP4056 charge IC: -$0.28 piece price
+- Skip USBLC6 (optional): -$3 Extended fee + -$0.25 piece price
+
+If we skip USBLC6 (the nRF52840 has integrated USB ESD diodes), total
+Extended fees drop to ~$12 and per-half BOM cost to ~$8-15.
 
 ## Layout/routing risks (in roughly increasing order of risk)
 
