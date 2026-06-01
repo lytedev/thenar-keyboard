@@ -274,9 +274,74 @@ Extended fees drop to ~$12 and per-half BOM cost to ~$8-15.
 
 ## Reference designs
 
-- **ZackFreedman/MiRage** — split, custom PCB, nRF52840, PCBA-assembled
-- **urob/zmk-sweep** — chip-direct ergogen layout
-- **Nordic reference designs** — official PCB reference for nRF52840
-  (`nRF52840 DK` schematic is public; that's the authoritative reference)
-- **Adafruit Feather nRF52840 Express** schematic — known-good
-  bare-chip reference layout
+Identified through targeted search; each contributes a different
+piece of the v1 design.
+
+### Primary reference: `Ladniy/jiran-ble-lite`
+
+<https://github.com/Ladniy/jiran-ble-lite>
+
+- **License**: CERN-OHL-P v2.0 (permissive open hardware — fork-friendly)
+- **Architecture**: Holyiot-18010 nRF52840 module (different module
+  than our MS88SF3 but same architectural approach — pre-certified RF
+  module instead of bare chip), split ergo, traditional matrix
+- **KiCad source**: confirmed `.kicad_sch` / `.kicad_pcb` / `.kicad_pro`
+  in `pcb/jiran-ble-lite/`, with separate left/right schematic files
+- **Maturity**: 300+ commits, v1.1.3 (Oct 2023)
+- **What we take**: split-half mechanics, power tree topology, USB-C +
+  charge IC layout, KiCad project structure
+- **What we replace**: Holyiot footprint → MS88SF3, the matrix
+  section (their diodes → our MCP23017 expanders)
+
+### Symbol/footprint source: `crides/kleeb`
+
+<https://github.com/crides/kleeb>
+
+- MIT-licensed KiCad 6 symbol + footprint library
+- **The only place I found with MS88SF3 symbols** (`ms88sf3-nrf52840`
+  and `ms88sf3-nrf52840-split`)
+- Pull symbol + footprint directly from this library
+
+### Power-tree reference: `ebastler/zmk-designguide`
+
+<https://github.com/ebastler/zmk-designguide>
+
+- Reference schematics for three nRF52840 modules (including Holyiot)
+- Power-tree patterns (LDO sizing, VDDH handling for nRF52840 DCDC)
+- Cross-reference for ZMK board file structure
+- Companion library: `ebastler/marbastlib` (symbols + footprints)
+
+### JLCPCB PCBA-feasibility reference: `ebastler/cornholius`
+
+<https://github.com/ebastler/cornholius>
+
+- License: CC BY-NC-SA 4.0 (**non-commercial only**, fine for personal
+  use but be aware if you ever sell)
+- **Gerbers only** (no `.kicad_sch` — can't fork the layout) but the
+  repo includes a BOM proven against JLCPCB's economic/standard PCBA
+  parts list
+- Use as a sanity check: "are the parts we picked actually
+  PCBA-assembled in a known-working design?"
+
+### MCP23017 reference: `SolderedElectronics/IO-expander-MCP23017-breakout-hardware-design`
+
+- Reference schematic for the MCP23017 section (TAPR OHL licence)
+- Standard configuration: I²C pull-ups, address straps, reset
+- Combined with `ZMK PR #1567` (MCP23017 driver) for the firmware
+  side
+
+## Concrete forking plan
+
+1. **Fork `jiran-ble-lite`** into our `v1` directory as the starting
+   PCB project
+2. **Swap the MCU footprint**: Holyiot 18010 → MS88SF3, using kleeb's
+   library
+3. **Adapt the power tree**: TLV70233 → XC6206 (per our BOM
+   optimisation), MCP73831 → TP4056
+4. **Add the MCP23017 section** (not present in jiran-ble-lite),
+   using SolderedElectronics' reference + ZMK driver docs
+5. **Replace the matrix** with our ergogen-scaffold output (modify
+   the ergogen config to output two-half / non-reversible layouts)
+6. **Test the BOM** against cornholius's JLCPCB-PCBA patterns
+7. **Generate the gerbers + pick-place + BOM CSV**, submit to JLCPCB
+   for first PCBA order
