@@ -42,6 +42,13 @@ rc1 (current `main`) stays as the validated prototype reference.
 - Reset: tie `RESET` to MCU GPIO so MCU can reset the expanders on
   boot.
 
+**Why MCP23017 over PCA9555A**: PCA9555A's headline advantage is
+~40 nA standby current vs MCP23017's ~1 µA. On a 110 mAh / 3.7 V
+battery, 1 µA would take 12.5 years to drain — utterly negligible
+compared to the BLE radio's bursty mA draws and the MCU's own
+3-5 µA sleep current. MCP23017 has wider community use in the ZMK
+ecosystem and better Zephyr driver support, so it's the safer pick.
+
 ### USB-C: standard 24-pin receptacle
 
 - LCSC: `C165948` (Korean Hroparts; common JLC-stocked USB-C).
@@ -72,16 +79,30 @@ rc1 (current `main`) stays as the validated prototype reference.
 
 ### Bootloader flashing strategy
 
-Recommended programmer: **Pi Pico flashed as `picoprobe`** (~$5,
-DAPLink-compatible). Then OpenOCD command:
+**Primary plan: JLCPCB Component Programming service**
+
+JLCPCB will flash a `.hex` to the nRF52840 as part of PCBA. For our
+2-board run that's ~$15-30 total: $8-25 setup + $0.50-1.50 per board.
+Cheaper than buying our own programmer and saves the manual SWD step.
+
+What we supply: Adafruit nRF52 bootloader hex from
+<https://github.com/adafruit/Adafruit_nRF52_Bootloader> (use the
+`nice_nano_v2` build — same chip layout from ZMK's perspective).
+
+After the one-time bootloader flash, USB drag-drop works exactly like
+the Nice!Nano: double-tap reset to enter bootloader, drop `.uf2` on
+the mass-storage device.
+
+**Fallback: DIY SWD via Pi Pico (`picoprobe`)**
+
+Still expose the 5-pin SWD pads on the PCB so you can recover bricked
+boards or reflash without re-ordering. With a Pi Pico flashed as
+picoprobe (~$5):
 
 ```
 openocd -f interface/cmsis-dap.cfg -f target/nrf52.cfg \
   -c "program adafruit_nrf52_bootloader.hex verify reset exit"
 ```
-
-Adafruit bootloader hex from <https://github.com/adafruit/Adafruit_nRF52_Bootloader>
-(use the `feather_nrf52840_express` build or `nice_nano_v2` build).
 
 ## ZMK shield changes
 
