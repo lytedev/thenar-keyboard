@@ -154,30 +154,41 @@ the expander's GPIO controller via phandles.
 
 ## BOM at LCSC (PCBA-ready)
 
-Per half (multiply ×2 for the keyboard total):
+**Verified against JLCPCB's parts catalogue 2026-05-18.** The IC-heavy
+parts of this BOM are all **Extended tier** — JLCPCB doesn't stock
+keyboard-specific MCUs and ESD/USB-C/charge ICs as Basic. Expect ~$24
+in one-time Extended setup fees on first order; subsequent orders
+using the same parts are free.
 
-| Part | Designator | LCSC | Tier | Notes |
+Per half (multiply ×2 for the keyboard total). "B" = Basic, "E" = Extended.
+
+| Designator | Part | LCSC | Tier | Notes |
 |---|---|---|---|---|
-| nRF52840 QIAA | U1 | C840628 | Basic | The MCU |
-| Chip antenna 2.45 GHz | E1 | C503520 | Extended? | Johanson 2450AT18B100E |
-| MCP23017 | U2, U3 | C9678 | Basic | I/O expanders ×2 |
-| MCP73831 | U4 | C424093 | Basic | LiPo charge IC |
-| TLV70233 | U5 | C144586 | Basic | 3.3V LDO |
-| USBLC6-2SC6 | U6 | C7519 | Basic | USB ESD protection |
-| USB-C receptacle (24-pin) | J1 | C165948 | Basic | Hroparts TYPE-C-31-M-12 |
-| 32 MHz crystal, 9 pF load | Y1 | C32346 | Basic | NDK NX2016SA |
-| 32.768 kHz crystal | Y2 | C32346 | Basic | (verify) |
-| 22 pF 0603 | C1–C4 | C1653 | Basic | Crystal load caps ×4 |
-| 4.7 µF 0603 | C5 | C19666 | Basic | Bulk decoupling |
-| 100 nF 0603 | C6–C15 | C14663 | Basic | Local decoupling ×10 |
-| 10 µH 0603 inductor | L1, L2 | C1046 | Basic | DCDC ×2 |
-| 4.7 kΩ 0603 | R1, R2 | C23162 | Basic | I²C pull-ups |
-| 5.1 kΩ 0603 | R3, R4 | C23186 | Basic | USB-C CC pull-downs |
-| 1 kΩ 0603 | R5–R7 | C21190 | Basic | Various pull-ups |
-| 100 kΩ 0603 | R8, R9 | C25803 | Basic | Reset pull-ups |
-| LED 0603 (status) | D1 | C84256 | Basic | Optional |
+| U1 | nRF52840-QIAA-R MCU | **C190794** | E | The MCU. No Basic option. |
+| E1 | Johanson 2450AT18B100E chip antenna | **C2917717** | E | 2.45 GHz |
+| U2, U3 | MCP23017-E/SO I/O expander | **C47023** | E | SOIC-28; SOP variant |
+| U4 | MCP73831T-2ACI/OT charge IC | C424093 | E | LiPo charge, 500 mA |
+| U5 | TLV70233DBVT 3.3 V LDO | **C110287** | E | SOT-23-5 |
+| U6 | USBLC6-2SC6 USB ESD | C7519 | E | SOT-23-6 |
+| J1 | TYPE-C-31-M-12 USB-C receptacle | C165948 | E | Hroparts |
+| Y1 | NDK NX2016SA 32 MHz crystal, 9 pF load | **C843260** | E | No Basic option |
+| Y2 | Epson Q13FC13500004 32.768 kHz crystal | C32346 | **B** | Watch crystal |
+| C1–C4 | 22 pF C0G 0603 cap | C1653 | B | Crystal load caps |
+| C5 | 4.7 µF X5R 0603 cap | C19666 | B | Bulk decoupling |
+| C6–C15 | 100 nF X7R 0603 cap | C14663 | B | Local decoupling |
+| L1, L2 | 10 µH 0603 inductor | **C1035** | B | Sunlord SDFL1608S100KTF |
+| R1, R2 | 4.7 kΩ 0603 | C23162 | B | I²C pull-ups |
+| R3, R4 | 5.1 kΩ 0603 | C23186 | B | USB-C CC pull-downs |
+| R5–R7 | 1 kΩ 0603 | C21190 | B | Various |
+| R8, R9 | 100 kΩ 0603 | C25803 | B | Reset pull-ups |
+| D1 | 0805 red LED (status) | C84256 | B | If 0603 desired, use C12624 (Extended) |
 
-Manual / through-hole:
+**Verification corrections from my first pass** (in case I need to
+re-do this with similar parts): all the original C-numbers I cited for
+ICs were wrong — they pointed at unrelated resistors/ADCs/etc. The
+numbers above are validated against JLCPCB's actual catalogue.
+
+Through-hole / hand-soldered (unchanged from rc1):
 - 28× Kailh Choc hotswap sockets (C2913963)
 - 1× EVQWGD001 encoder
 - 1× C128955 slider switch
@@ -185,12 +196,16 @@ Manual / through-hole:
 - 1× 5-pin Nice!View header (if displaying)
 - 2× battery solder pads
 
-Same switches + keycaps + LiPo battery as rc1 (no change there).
+**Rough cost per half**: ~$15-25 in components from LCSC + Extended
+setup fee (~$24 one-time across the BOM, **shared between left/right
+designs in the same order**) + ~$10-15 PCB + ~$25-40 PCBA labour. So
+roughly **$50-80 per half for the PCBA-assembled board**, plus the
+through-hole BOM (switches/keycaps still ~$50-80 total).
 
-**Rough cost per half**: ~$12-15 in components from LCSC + ~$25-40 for
-JLCPCB PCBA setup (depending on Basic/Extended part mix). So ~$70-110
-for both halves' boards-with-chips-on, plus the through-hole BOM
-(switches/keycaps still $50-80 total).
+Two designs (left + right) in the same JLCPCB order share the Extended
+fees, so total project cost is roughly $100-160 for both halves' bare
+assembled boards on first order, then ~$60-100 per pair on revisions
+(setup fees amortised, just paying parts + assembly).
 
 ## Layout/routing risks (in roughly increasing order of risk)
 
