@@ -14,6 +14,34 @@ rc1 (current `main`) stays as the validated prototype reference.
 
 ## Architecture choices
 
+### Drop reversibility — two separate PCB designs
+
+rc1 used the corax-style reversible PCB (one design, flipped for the
+other half, with jumpers selecting per-side wiring). That made sense
+for hand-soldering: one PCB SKU, user solders the appropriate jumpers.
+
+For v1 (PCBA), reversibility becomes a tax:
+
+- JLCPCB places all populated footprints either way — paying for
+  duplicate footprints or jumper bridges is wasted money.
+- The schematic complexity (jumpers around the MCU, display, encoder)
+  multiplies with each chip we add. Discrete nRF52840 + 2× MCP23017
+  + USB-C + charge IC means a *lot* of new jumpers to design around.
+- We can't even verify a reversible v1 design without spending the
+  PCBA money up front.
+
+**Plan: two PCB layouts emitted from one ergogen config.** Ergogen's
+built-in `mirror` directive handles the geometry; we get `thenar-left`
+and `thenar-right` as independent KiCad files. Each gets:
+
+- Components placed for its specific half (MCU on the inner edge, etc.)
+- Pure single-side routing (no mirror copper)
+- Its own gerber + PCBA order at JLCPCB
+
+Cost delta: separate designs are ~$50-80 more for the first PCBA run
+(two design setups vs one), but save iteration time and unlock smaller
+per-half boards. Net win after the first revision.
+
 ### MCU: nRF52840 (bare chip)
 
 - LCSC part: `C840628` (Nordic, available, "Basic" tier on JLCPCB)
