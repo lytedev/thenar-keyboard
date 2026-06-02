@@ -1,0 +1,25 @@
+if SHIELD_THENAR_V1_LEFT
+
+config ZMK_KEYBOARD_NAME
+    default "Thenar v1"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+endif
+
+if SHIELD_THENAR_V1_LEFT || SHIELD_THENAR_V1_RIGHT
+
+config ZMK_SPLIT
+    default y
+
+# MCP23017 driver belongs to the Zephyr GPIO subsystem.
+config GPIO_MCP23017
+    default y
+
+# Enable I2C explicitly so the bus is brought up before the kscan
+# probes its input-gpios.
+config I2C
+    default y
+
+endif

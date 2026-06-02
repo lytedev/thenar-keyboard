@@ -1,0 +1,5 @@
+include:
+  - board: thenar_v1
+    shield: thenar_v1_left
+  - board: thenar_v1
+    shield: thenar_v1_right
