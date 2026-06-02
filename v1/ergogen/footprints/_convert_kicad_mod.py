@@ -95,7 +95,10 @@ def main() -> int:
     for pad in unique_pads:
         # Sanitize pad name to JS identifier; KiCad allows weird chars
         ident = "P" + re.sub(r'[^A-Za-z0-9_]', '_', pad)
-        out.append(f"    {ident}: undefined,    // pad \"{pad}\"")
+        # Declare as a net-typed param so ergogen parses values into net
+        # objects with .str; a plain string default makes p[ident] a bare
+        # string whose .str is undefined and emits `undefined` in the PCB.
+        out.append(f"    {ident}: {{ type: 'net', value: '{ident}_NC' }},    // pad \"{pad}\"")
     out.append(f"  }},")
     out.append(f"  body: p => {{")
     out.append(f"    // For each pad, substitute the net by adding a `(net N \"<name>\")`")
@@ -125,6 +128,12 @@ def main() -> int:
         # `side` substitution: F.Cu/F.Paste/F.Mask → ${p.side}.Cu/Paste/Mask
         cleaned = re.sub(r'"F\.(Cu|Paste|Mask|SilkS|Fab|CrtYd)"', r'${p.side}.\1', cleaned)
         cleaned = re.sub(r'\bF\.(Cu|Paste|Mask|SilkS|Fab|CrtYd)\b', r'${p.side}.\1', cleaned)
+        # Escape any KiCad ${REFERENCE} / ${VALUE} placeholders that would
+        # otherwise be evaluated by the JS template literal.
+        cleaned = cleaned.replace('${', '\\${')
+        # But we DO want our own ${p.side} substitutions to evaluate, so
+        # unescape those:
+        cleaned = cleaned.replace('\\${p.side}', '${p.side}')
         out.append(f"      {cleaned} ${{padNet(\"{pad_num}\")}})")
 
     # ---- emit non-pad graphics (fp_line, fp_circle, fp_text user, etc.)
@@ -160,6 +169,9 @@ def main() -> int:
         # Translate layer names to use ${p.side}
         block = re.sub(r'"F\.(Cu|Paste|Mask|SilkS|Fab|CrtYd)"', r'${p.side}.\1', block)
         block = re.sub(r'\bF\.(Cu|Paste|Mask|SilkS|Fab|CrtYd)\b', r'${p.side}.\1', block)
+        # Escape KiCad's ${REFERENCE} / ${VALUE} placeholders
+        block = block.replace('${', '\\${')
+        block = block.replace('\\${p.side}', '${p.side}')
         out.append(f"      {block}")
         i = j
 

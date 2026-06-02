@@ -36,12 +36,26 @@ module.exports = {
   params: {
     designator: 'U',
     side: 'F',
-    // GPB bank (pins 1-8)
-    GPB0: undefined, GPB1: undefined, GPB2: undefined, GPB3: undefined,
-    GPB4: undefined, GPB5: undefined, GPB6: undefined, GPB7: undefined,
+    // GPB bank (pins 1-8). Default each to a unique placeholder net so any
+    // unconnected GPIO shows up with a unique name in the kicad_pcb instead
+    // of all collapsing onto a single "" net. Override in pcbs config.
+    GPB0: { type: 'net', value: 'GPB0_NC' },
+    GPB1: { type: 'net', value: 'GPB1_NC' },
+    GPB2: { type: 'net', value: 'GPB2_NC' },
+    GPB3: { type: 'net', value: 'GPB3_NC' },
+    GPB4: { type: 'net', value: 'GPB4_NC' },
+    GPB5: { type: 'net', value: 'GPB5_NC' },
+    GPB6: { type: 'net', value: 'GPB6_NC' },
+    GPB7: { type: 'net', value: 'GPB7_NC' },
     // GPA bank (pins 21-28)
-    GPA0: undefined, GPA1: undefined, GPA2: undefined, GPA3: undefined,
-    GPA4: undefined, GPA5: undefined, GPA6: undefined, GPA7: undefined,
+    GPA0: { type: 'net', value: 'GPA0_NC' },
+    GPA1: { type: 'net', value: 'GPA1_NC' },
+    GPA2: { type: 'net', value: 'GPA2_NC' },
+    GPA3: { type: 'net', value: 'GPA3_NC' },
+    GPA4: { type: 'net', value: 'GPA4_NC' },
+    GPA5: { type: 'net', value: 'GPA5_NC' },
+    GPA6: { type: 'net', value: 'GPA6_NC' },
+    GPA7: { type: 'net', value: 'GPA7_NC' },
     // Power
     VDD: { type: 'net', value: 'VCC' },
     VSS: { type: 'net', value: 'GND' },

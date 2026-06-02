@@ -7,23 +7,23 @@ module.exports = {
   params: {
     designator: 'U',
     side: 'F',
-    PA1: undefined,    // pad "A1"
-    PA4: undefined,    // pad "A4"
-    PA5: undefined,    // pad "A5"
-    PA6: undefined,    // pad "A6"
-    PA7: undefined,    // pad "A7"
-    PA8: undefined,    // pad "A8"
-    PA9: undefined,    // pad "A9"
-    PB1: undefined,    // pad "B1"
-    PB4: undefined,    // pad "B4"
-    PB5: undefined,    // pad "B5"
-    PB6: undefined,    // pad "B6"
-    PB7: undefined,    // pad "B7"
-    PB8: undefined,    // pad "B8"
-    PB9: undefined,    // pad "B9"
-    PSH: undefined,    // pad "SH"
-    PA12: undefined,    // pad "A12"
-    PB12: undefined,    // pad "B12"
+    PA1: { type: 'net', value: 'PA1_NC' },    // pad "A1"
+    PA4: { type: 'net', value: 'PA4_NC' },    // pad "A4"
+    PA5: { type: 'net', value: 'PA5_NC' },    // pad "A5"
+    PA6: { type: 'net', value: 'PA6_NC' },    // pad "A6"
+    PA7: { type: 'net', value: 'PA7_NC' },    // pad "A7"
+    PA8: { type: 'net', value: 'PA8_NC' },    // pad "A8"
+    PA9: { type: 'net', value: 'PA9_NC' },    // pad "A9"
+    PB1: { type: 'net', value: 'PB1_NC' },    // pad "B1"
+    PB4: { type: 'net', value: 'PB4_NC' },    // pad "B4"
+    PB5: { type: 'net', value: 'PB5_NC' },    // pad "B5"
+    PB6: { type: 'net', value: 'PB6_NC' },    // pad "B6"
+    PB7: { type: 'net', value: 'PB7_NC' },    // pad "B7"
+    PB8: { type: 'net', value: 'PB8_NC' },    // pad "B8"
+    PB9: { type: 'net', value: 'PB9_NC' },    // pad "B9"
+    PSH: { type: 'net', value: 'PSH_NC' },    // pad "SH"
+    PA12: { type: 'net', value: 'PA12_NC' },    // pad "A12"
+    PB12: { type: 'net', value: 'PB12_NC' },    // pad "B12"
   },
   body: p => {
     // For each pad, substitute the net by adding a `(net N "<name>")`
@@ -168,7 +168,7 @@ module.exports = {
 		(layers "*.Cu" "*.Mask" ${p.side}.Paste)
 		(remove_unused_layers no)
 		(uuid "b359a8f7-cacc-4bd1-b406-b8f87e2dd9f4") ${padNet("SH")})
-      (fp_text user "${REFERENCE}"
+      (fp_text user "\${REFERENCE}"
 		(at 0 0 0)
 		(layer ${p.side}.Fab)
 		(uuid "8f7fbb31-91be-49b9-970e-3fda1a259835")
