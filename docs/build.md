@@ -99,16 +99,28 @@ step that you are working on the correct side.
 
 ### Jumpers
 
-There are 12 jumpers on each side of the board, in three groups (MCU,
-display, scrollwheel). They make the MCU/display/encoder footprints
-reusable between the two halves by letting you pick which side connects
-each net.
+There are **31 jumpers to bridge per half**, in three groups (counts
+verified against the ergogen output):
+
+- **MCU (Nice!Nano): 24** — two chevron jumpers per pin row (one on the
+  left of the module, one on the right), 12 rows.
+- **Display (Nice!View): 4** — one per display pin except the center
+  VCC pin, which is the same net on both sides and has no jumper.
+- **Scrollwheel (encoder): 3** — ENCA, ENCB, GND, next to the encoder
+  footprint.
+
+They make the MCU/display/encoder footprints reusable between the two
+halves by letting you pick which side connects each net.
 
 **Solder the jumpers ONLY on the down side of the PCB.** That is: when
 building the left half (up side labelled "Left Hand Up"), solder the
 jumpers on the "Right Hand Up" side. This is critical — soldering on
 the wrong side will not work, and on the MCU jumpers in particular it
 can short pins together and destroy the Nice!Nano on power-up.
+
+The encoder group has jumper pads on both faces (three per face); the
+same rule applies — bridge only the three on the down side and leave
+the up-side group open. The up-side group is the other half's wiring.
 
 Bridge each jumper with a small blob of solder across the two pads.
 
