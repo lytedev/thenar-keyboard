@@ -85,6 +85,10 @@
             , <&key_physical_attrs 150 100 1027  520 (-1500)  1102   570>
             , <&key_physical_attrs 100 100 1108  448       0     0     0>
             , <&key_physical_attrs 100 100 1208  433       0     0     0>
+            // Encoder push switches (left, right) - next to the inner
+            // bottom corner where the scrollwheel mounts.
+            , <&key_physical_attrs 100 100  810  348       0     0     0>
+            , <&key_physical_attrs 100 100  905  348       0     0     0>
             ;
     };
 };

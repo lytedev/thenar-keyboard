@@ -28,6 +28,44 @@ measure on a real encoder; the EVQWGD001 datasheet lists mechanical
 dimensions but the peg location isn't always shown). Size around
 1.2 mm diameter should be enough.
 
+### Screw holes are plated and one merges with the 5-key pad
+
+**Symptom**: The inner-num key ("5" on the left half) doesn't register.
+The top-right screw hole is a *plated* through-hole (PTH) whose copper
+annulus physically touches the switch's down-side hotswap pad (DRC:
+`PTH pad [<no net>] of _5` vs `Pad 2 [inner_num] of S26`). Two failure
+modes: (1) the huge copper ring acts as a heat sink fused to the pad,
+so the hotswap socket joint goes cold during soldering — this is what
+actually bit; (2) a metal screw + standoff chain through that hole can
+ground the switch net.
+
+**Where**: `thenar/ergogen/footprints/hole.js` emits a plated pad; the
+`screw_top_right` zone anchor in `thenar/ergogen/config.yaml` places it
+too close to `matrix_inner_num`.
+
+**Current workaround**: Solder that hotswap socket with extra heat and
+dwell time (the ring steals heat). Prefer a nylon screw or washer at
+that position.
+
+**v2 fix**: Make the hole footprint NPTH (no copper), and/or move the
+`screw_top_right` anchor a couple mm away from the key. The same
+`hole.js` wrapper was copied into `v1/ergogen/footprints/` — fix it
+there too.
+
+### EVQWGD001 rotation needs CONFIG_EC11 (fixed, kept for the record)
+
+**Symptom**: Encoder press works but rotation does nothing, with
+perfect continuity on all three signal legs. The `alps,ec11`
+devicetree nodes alone do NOT pull in the driver — without
+`CONFIG_EC11=y` the firmware builds cleanly and rotation is silently
+dead.
+
+**Fix (in tree)**: `config/thenar.conf` sets `CONFIG_EC11=y` and
+`CONFIG_EC11_TRIGGER_GLOBAL_THREAD=y`. If rotation ever dies again
+after config surgery, first check that file still exists and that the
+build log contains `ZMK Config Kconfig: .../config/thenar.conf` and
+`ec11.c.obj`.
+
 ---
 
 (Add new deviations above this line as they're found.)

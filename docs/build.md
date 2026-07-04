@@ -215,11 +215,68 @@ Add keycaps.
 
 ## Display (Nice!View)
 
-TODO
+The firmware includes the nice!view shields, so a display works
+plug-and-play once the hardware is in:
+
+1. Bridge the **4 display jumpers on the down side** — the chevrons for
+   MOSI, SCK, GND, and CS next to the display header position. The
+   center pin (VCC) has no jumper; it's the same net on both faces.
+2. Solder the 5-pin socket on the up side, next to the MCU.
+3. Seat the nice!view. No firmware change needed — the same image runs
+   with or without the display attached (the SPI writes are
+   fire-and-forget).
+
+## Flashing
+
+`nix run .#flash -- left|right` builds and waits for the `NICENANO`
+mass-storage device (double-tap reset to enter the bootloader), then
+copies the UF2. This needs a machine that can mount USB storage.
+
+**Over SSH** (no desktop session, polkit refuses `udisksctl`): use the
+bootloader's serial DFU channel instead — it only needs `dialout`
+group. Convert the UF2 to hex + DFU zip and flash via `/dev/ttyACM0`:
+
+```bash
+# uf2 -> Intel HEX (script in the repo scratchpad history; UF2 blocks
+# are self-addressed, app range starts at 0x26000)
+adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application zmk_left.hex dfu.zip
+adafruit-nrfutil dfu serial --package dfu.zip -p /dev/ttyACM0 -b 115200
+```
+
+### Firmware troubleshooting notes (hard-won)
+
+- **`config/thenar.keymap` overrides the shield keymap.** Per ZMK's
+  config-folder convention, `config/<name>.keymap` and
+  `config/<name>.conf` take precedence over the copies under
+  `config/boards/shields/thenar/`. Edit the top-level ones; the build
+  log line `Using keymap file: ...` tells you which file actually won.
+- **ZMK is pinned to a release tag in `config/west.yml` — keep it
+  that way.** A `main` snapshot once built a 50 KB image with no USB
+  interfaces and no BLE: the board enumerated but no key could ever
+  register. If firmware behaves impossibly, check the pin and the
+  linker's `FLASH:` usage line in the build log (healthy builds are
+  several hundred KB).
+- **New files are invisible to `nix build` until tracked.** The flake
+  source only includes git-tracked files; in this jj repo, run `jj st`
+  (any jj command snapshots) after creating a file, or the build
+  silently uses the old tree.
+- **Encoder rotation needs `CONFIG_EC11=y`** (see
+  `config/thenar.conf` and docs/known-issues.md).
+- **Verify a rebuild actually changed the binary** before re-flashing
+  to chase a symptom: `sha256sum` the old and new UF2s. Identical
+  hashes mean your change didn't reach the build (see the two traps
+  above).
 
 ## 3D printed case
 
-TODO — and note: the upstream corax54 case will not fit thenar without
-modification, because the outer column has an extra key. Either redesign
-from `outlines/case.dxf` (produced by `nix build .#pcbs`) or extend the
-upstream case in CAD.
+A 3D-printable switch mid-plate is available: `nix build
+.#switchplate-stl` produces a 1.3 mm plate (Choc clip depth) with
+switch cutouts, scrollwheel cutout, and screw holes. Print two, mirror
+one in the slicer. FDM cutouts come out slightly undersized; if
+switches won't clip in, bump `switchplate_switch_cutout` to 14.2 in
+`thenar/ergogen/config.yaml` and rebuild.
+
+A full case is TODO — note: the upstream corax54 case will not fit
+thenar without modification, because the outer column has an extra key.
+Either redesign from `outlines/case.dxf` (produced by `nix build
+.#scaffold`) or extend the upstream case in CAD.

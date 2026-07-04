@@ -20,6 +20,11 @@
     //   thumb.space : column_net=row4, row_net=col4 -> RC(4,4)
     //
     // Right half adds col-offset 6, so right.middle.mod is RC(4,7) etc.
+    //
+    // The encoder's push switch is also in the matrix: column_net=row5,
+    // row_net=col4 -> RC(4,5) on the left half, RC(4,11) on the right.
+    // Both map to the last two keymap positions (56 = left press,
+    // 57 = right press).
     default_transform: keymap_transform_0 {
         compatible = "zmk,matrix-transform";
         rows = <5>;
@@ -31,6 +36,7 @@ RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5)                                 
 RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5)                                 RC(2,6) RC(2,7) RC(2,8) RC(2,9) RC(2,10) RC(2,11)
 RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5)                                 RC(3,6) RC(3,7) RC(3,8) RC(3,9) RC(3,10) RC(3,11)
                                 RC(4,1) RC(4,2) RC(4,3) RC(4,4) RC(4,10) RC(4,9) RC(4,8) RC(4,7)
+RC(4,5) RC(4,11)
         >;
     };
 
@@ -49,10 +55,15 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5)                                 
         status = "disabled";
     };
 
+    // Same pins as encoder_left: thenar routes the encoder to the ENCA/
+    // ENCB nets (pins 20/21) on BOTH halves - the down-side jumpers next
+    // to the encoder select the correct pin order per side. (The old 2/3
+    // assignment was inherited from upstream corax and never applied to
+    // thenar's routing.)
     encoder_right: encoder_right {
         compatible = "alps,ec11";
-        a-gpios = <&pro_micro 2 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&pro_micro 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        a-gpios = <&pro_micro 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&pro_micro 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
         steps = <30>;
         status = "disabled";
     };
@@ -60,6 +71,11 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5)                                 
     sensors: sensors {
         compatible = "zmk,keymap-sensors";
         sensors = <&encoder_left &encoder_right>;
+        // Measured on real hardware (evtest capture, 2026-07): the
+        // EVQWGD001 has ~15 detents per revolution and emits 2 quadrature
+        // pulses per detent, i.e. 30 pulses/rev - hence steps = <30> on
+        // the encoder nodes and 15 triggers here for exactly one keymap
+        // event per detent. Setting this to 30 double-fires per detent.
         triggers-per-rotation = <15>;
     };
 };

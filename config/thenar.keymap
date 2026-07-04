@@ -7,7 +7,7 @@
 // freshly-flashed Nice!Nano works out of the box - but most users will
 // fork this into their own zmk-config repo and write a real keymap.
 //
-// Position layout (56 keys, left half then right half, top-to-bottom):
+// Position layout (58 positions, left half then right half, top-to-bottom):
 //
 //   num   :  0  1  2  3  4  5    |    6  7  8  9 10 11
 //   top   : 12 13 14 15 16 17    |   18 19 20 21 22 23
@@ -18,8 +18,14 @@
 //             middle  index thumb thumb thumb thumb index middle
 //              mod   mod   layer space space layer mod    mod
 //
+//   enc   : 56 (left press)      |   57 (right press)
+//
 // One layer (base) with QWERTY + bottom-row modifiers + thumb-cluster
 // space/enter/layer. Bluetooth pairing on the BT layer.
+//
+// NOTE: this file (config/thenar.keymap) is the keymap the build actually
+// uses - it OVERRIDES boards/shields/thenar/thenar.keymap per ZMK's
+// user-config convention. Edit here, not there.
 
 / {
     keymap {
@@ -33,9 +39,10 @@
 &kp LCTL  &kp A    &kp S  &kp D  &kp F  &kp G                                          &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
 &kp LSFT  &kp Z    &kp X  &kp C  &kp V  &kp B                                          &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RSFT
                                  &kp LALT &kp LGUI &mo 1 &kp SPACE  &kp ENTER &mo 1    &kp LBKT &kp RBKT
+&kp K_MUTE &kp K_MUTE
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_DN PG_UP>;
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
         bt_layer {
@@ -46,6 +53,7 @@
 &trans      &trans       &trans       &trans       &trans       &trans                                                                  &trans      &kp LEFT    &kp DOWN    &kp UP      &kp RIGHT   &trans
 &out OUT_USB &out OUT_BLE &trans      &trans       &trans       &sys_reset                                                              &sys_reset  &trans      &trans      &trans      &trans      &bootloader
                                                    &trans       &trans       &trans      &trans       &trans      &trans                &trans      &trans
+&trans &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_PREV C_NEXT>;

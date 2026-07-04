@@ -150,6 +150,73 @@
             dontInstall = true;
           };
 
+          # 3D-printable switch mid-plate. Extrudes the ergogen `switchplate`
+          # outline (14mm Choc cutouts + scrollwheel cutout baked in) to
+          # 1.3mm - within the 1.2-1.4mm band Kailh Choc clips engage - and
+          # subtracts the mounting screw holes, which the PCB variant gets
+          # as footprints rather than as part of the DXF outline. The
+          # outline is a single half: print one as-is, mirror in the slicer
+          # for the other half. Thickness/hole size are -D overridable in
+          # thenar/scripts/switchplate.scad.
+          switchplate-stl = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-switchplate.stl";
+            src = ./thenar;
+            nativeBuildInputs = [ pkgs.ergogen pkgs.openscad pkgs.python313 ];
+            buildPhase = ''
+              runHook preBuild
+              export HOME=$(mktemp -d)
+              # --debug additionally emits points/points.yaml, which is
+              # where the screw hole centres come from.
+              ergogen ./ergogen -o $TMPDIR/ergogen --debug
+              screws=$(python3 ./scripts/switchplate_holes.py \
+                $TMPDIR/ergogen/points/points.yaml)
+              mkdir -p $out
+              openscad \
+                -D "dxf=\"$TMPDIR/ergogen/outlines/switchplate.dxf\"" \
+                -D "screw_positions=$screws" \
+                -o $out/switchplate.stl \
+                ./scripts/switchplate.scad
+              runHook postBuild
+            '';
+            dontInstall = true;
+          };
+
+          # 3D-printable bottom case tray. Offsets the ergogen `board`
+          # outline outward for the perimeter wall (the `case` outline is
+          # the same perimeter with screw holes pre-subtracted, which
+          # offset() would distort, so the holes are cut in OpenSCAD
+          # instead), floors it, and subtracts the switchplate screw
+          # holes plus a USB-C notch located from the mcu ergogen point.
+          # Like the switchplate, the outline is a single half: print one
+          # as-is, mirror in the slicer for the other. Wall/floor/
+          # clearance dimensions are -D overridable in
+          # thenar/scripts/case.scad.
+          case-stl = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-case.stl";
+            src = ./thenar;
+            nativeBuildInputs = [ pkgs.ergogen pkgs.openscad pkgs.python313 ];
+            buildPhase = ''
+              runHook preBuild
+              export HOME=$(mktemp -d)
+              # --debug additionally emits points/points.yaml, which is
+              # where the screw hole and mcu centres come from.
+              ergogen ./ergogen -o $TMPDIR/ergogen --debug
+              screws=$(python3 ./scripts/switchplate_holes.py \
+                $TMPDIR/ergogen/points/points.yaml)
+              mcu=$(python3 ./scripts/switchplate_holes.py \
+                $TMPDIR/ergogen/points/points.yaml mcu)
+              mkdir -p $out
+              openscad \
+                -D "dxf=\"$TMPDIR/ergogen/outlines/board.dxf\"" \
+                -D "screw_positions=$screws" \
+                -D "usb_positions=$mcu" \
+                -o $out/case.stl \
+                ./scripts/case.scad
+              runHook postBuild
+            '';
+            dontInstall = true;
+          };
+
           # Verify that the routed PCB's footprint placement matches the current
           # ergogen scaffold. If you edit thenar/ergogen/config.yaml without
           # re-merging into thenar/routed/, this check fails.
@@ -194,8 +261,13 @@
               ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig"
             ];
             board = "nice_nano";
-            shield = "thenar_%PART%";
-            zephyrDepsHash = "sha256-emLUrBuHwtniwD7dtJBOkZwaltHz/n1OCJ35mxY7t38=";
+            # Include the nice!view shields (matches config/build.yaml).
+            # Safe with no display attached: the LS0xx SPI writes are
+            # fire-and-forget, so the same image works bare or with a
+            # display socketed in later.
+            shield = "thenar_%PART% nice_view_adapter nice_view";
+            # Hash for the zmk v0.3.0 dependency snapshot (west.yml pin).
+            zephyrDepsHash = "sha256-gsqiTDJLAihVyBXVFlgXwqRmlREcFJctKpl4tEWmVlY=";
           };
 
           firmware-left = pkgs.runCommand "thenar-left.uf2" { } ''
@@ -378,7 +450,8 @@
           };
         in
         {
-          inherit scaffold gerbers gerbers-zip switchplate-step
+          inherit scaffold gerbers gerbers-zip switchplate-step switchplate-stl
+                  case-stl
                   check-routing-drift kicadPython routed-auto freerouting
                   firmware firmware-left firmware-right flash
                   v1-scaffold v1-firmware v1-firmware-left v1-firmware-right

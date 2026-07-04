@@ -13,4 +13,8 @@ if SHIELD_THENAR_LEFT || SHIELD_THENAR_RIGHT
 config ZMK_SPLIT
     default y
 
+# Mouse scroll (&msc) + mouse click (&mkp) for the scrollwheel encoder.
+config ZMK_POINTING
+    default y
+
 endif
