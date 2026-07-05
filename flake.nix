@@ -182,6 +182,37 @@
           };
 
           # 3D-printable bottom case tray. Offsets the ergogen `board`
+          # Calibration coupon for dialing in FDM cutout compensation
+          # before printing a full plate: five labeled 14mm Choc cutouts
+          # at 0/0.10/0.15/0.20/0.25mm compensation. Press-fit a switch
+          # into each; the label that clips firmly without wobble is your
+          # slicer's hole-horizontal-expansion value (or rebuild the
+          # plate with -D print_compensation=<value>).
+          switchplate-cal-stl = pkgs.stdenvNoCC.mkDerivation {
+            name = "thenar-switchplate-cal.stl";
+            src = ./thenar;
+            nativeBuildInputs = [ pkgs.openscad pkgs.liberation_ttf pkgs.fontconfig ];
+            buildPhase = ''
+              runHook preBuild
+              export HOME=$(mktemp -d)
+              # The coupon engraves text labels; point fontconfig at
+              # liberation so `text()` resolves the font in the sandbox.
+              export FONTCONFIG_FILE=$(mktemp)
+              cat > $FONTCONFIG_FILE << EOF
+              <?xml version="1.0"?>
+              <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+              <fontconfig>
+                <dir>${pkgs.liberation_ttf}/share/fonts</dir>
+                <cachedir>$HOME/fontcache</cachedir>
+              </fontconfig>
+              EOF
+              mkdir -p $out
+              openscad -o $out/switchplate-cal.stl ./scripts/switchplate-cal.scad
+              runHook postBuild
+            '';
+            dontInstall = true;
+          };
+
           # outline outward for the perimeter wall (the `case` outline is
           # the same perimeter with screw holes pre-subtracted, which
           # offset() would distort, so the holes are cut in OpenSCAD
@@ -451,7 +482,7 @@
         in
         {
           inherit scaffold gerbers gerbers-zip switchplate-step switchplate-stl
-                  case-stl
+                  switchplate-cal-stl case-stl
                   check-routing-drift kicadPython routed-auto freerouting
                   firmware firmware-left firmware-right flash
                   v1-scaffold v1-firmware v1-firmware-left v1-firmware-right
