@@ -150,6 +150,14 @@
             dontInstall = true;
           };
 
+          # FDM shrink compensation baked into the switchplate STL, in mm
+          # per cutout side. Calibrated 2026-07-06 with the
+          # .#switchplate-cal-stl coupon on Daniel's printer at 0.1mm
+          # layers with slowed outer walls - the "15" cutout was the
+          # right fit (tight, no warping). Set to 0 for a CAD-true STL
+          # (e.g. if compensating in the slicer instead - don't do both).
+          switchplateCompensation = "0.15";
+
           # 3D-printable switch mid-plate. Extrudes the ergogen `switchplate`
           # outline (14mm Choc cutouts + scrollwheel cutout baked in) to
           # 1.3mm - within the 1.2-1.4mm band Kailh Choc clips engage - and
@@ -174,6 +182,7 @@
               openscad \
                 -D "dxf=\"$TMPDIR/ergogen/outlines/switchplate.dxf\"" \
                 -D "screw_positions=$screws" \
+                -D "print_compensation=${switchplateCompensation}" \
                 -o $out/switchplate.stl \
                 ./scripts/switchplate.scad
               runHook postBuild
