@@ -342,151 +342,12 @@
             '';
           };
 
-          ###############################################################
-          # ============================  v1  ============================
-          ###############################################################
-          # v1 derivations live alongside rc1 so both can be built from
-          # the same checkout. rc1 stays the validated baseline; v1 is
-          # the PCBA redesign per docs/v1-design.md.
-
-          # v1 scaffold: ergogen run on v1/ergogen/. Same pattern as rc1
-          # but only emits the keyboard PCB (no switchplate).
-          v1-scaffold = pkgs.stdenvNoCC.mkDerivation {
-            name = "thenar-v1-scaffold";
-            src = ./v1;
-            nativeBuildInputs = [ pkgs.ergogen pkgs.python313 pkgs.kicad kicadPython ];
-            buildPhase = ''
-              runHook preBuild
-              export HOME=$(mktemp -d)
-              mkdir -p $out
-              ergogen ./ergogen -o $out
-              kicad-cli pcb upgrade $out/pcbs/keyboard.kicad_pcb
-              # Reuse rc1's project-file generator. POWER_NETS for v1
-              # differs from rc1 (VBAT vs BAT+, no RAW); the script reads
-              # the actual net list out of the PCB and matches on the
-              # name patterns, so the rc1 default list is a strict
-              # superset that works here. Pass the whole scripts dir so
-              # the script's sibling template JSON is found at runtime.
-              python3 ${./thenar/scripts}/write_kicad_pro.py \
-                $out/pcbs/keyboard.kicad_pcb
-              runHook postBuild
-            '';
-            dontInstall = true;
-          };
-
-          # v1 routed PCBs - one per half, no reversibility. These will
-          # exist after Stage 4 of the build recipe; until then both paths
-          # may not exist and v1-gerbers will fail with a clear message.
-          v1RoutedLeft = ./v1/routed/keyboard-left.kicad_pcb;
-          v1RoutedRight = ./v1/routed/keyboard-right.kicad_pcb;
-
-          # v1 firmware - zmk-nix on v1/zmk/. zmk-nix expects the west
-          # manifest at <src>/config/west.yml, so we materialise a src
-          # tree with v1/zmk copied to config/.
-          v1FirmwareSrc = pkgs.runCommand "thenar-v1-zmk-src" { } ''
-            mkdir -p $out/config
-            cp -r ${./v1/zmk}/. $out/config/
-          '';
-
-          v1-firmware = zmk-nix.legacyPackages.${pkgs.system}.buildSplitKeyboard {
-            name = "thenar-v1-firmware";
-            src = v1FirmwareSrc;
-            board = "thenar_v1";
-            shield = "thenar_v1_%PART%";
-            # First build will fail with a hash mismatch - paste the hash
-            # nix reports into this field. v1 pulls a different set of
-            # Zephyr modules than rc1 (mcp23017 driver in particular) so
-            # the hash does not match.
-            zephyrDepsHash = pkgs.lib.fakeHash;
-          };
-
-          v1-firmware-left = pkgs.runCommand "thenar-v1-left.uf2" { } ''
-            cp ${v1-firmware}/zmk_left.uf2 $out
-          '';
-          v1-firmware-right = pkgs.runCommand "thenar-v1-right.uf2" { } ''
-            cp ${v1-firmware}/zmk_right.uf2 $out
-          '';
-
-          v1-flash = pkgs.writeShellApplication {
-            name = "v1-flash";
-            runtimeInputs = [ pkgs.util-linux pkgs.coreutils ];
-            text = ''
-              set -euo pipefail
-              if [ "$#" -ne 1 ] || ! [[ "$1" =~ ^(left|right)$ ]]; then
-                echo "usage: nix run .#v1-flash -- (left|right)" >&2
-                exit 2
-              fi
-              part=$1
-              uf2=${v1-firmware}/zmk_$part.uf2
-              if [ ! -f "$uf2" ]; then
-                echo "error: $uf2 not found - did the build succeed?" >&2
-                exit 1
-              fi
-              echo "[v1-flash] firmware ready: $uf2"
-              echo "[v1-flash] double-tap reset on the $part-hand thenar v1 now."
-              # The Adafruit nRF52 bootloader presents NICENANO regardless
-              # of which custom board it's flashed onto - same UF2 volume
-              # label as the rc1 boards. (One of the reasons we picked
-              # the nice_nano_v2 bootloader build.)
-              echo "[v1-flash] waiting for NICENANO mass-storage to appear..."
-              while :; do
-                mount=$(lsblk -o LABEL,MOUNTPOINT -nr | awk '$1=="NICENANO" {print $2; exit}')
-                if [ -n "$mount" ]; then break; fi
-                sleep 1
-              done
-              echo "[v1-flash] mounted at $mount; copying..."
-              cp "$uf2" "$mount/"
-              sync
-              echo "[v1-flash] done. The board will reboot and unmount automatically."
-            '';
-          };
-
-          # v1 PCBA artifacts: pick-place (CPL) CSV + a starter BOM CSV
-          # for JLCPCB. Both are derived from the routed PCBs of each
-          # half. The pick-place CSV maps footprints to (X, Y, side, rot)
-          # and matches JLCPCB's expected header line.
-          v1-pcba = pkgs.stdenvNoCC.mkDerivation {
-            name = "thenar-v1-pcba";
-            nativeBuildInputs = [ pkgs.kicad ];
-            dontUnpack = true;
-            buildPhase = ''
-              runHook preBuild
-              if [ ! -f ${v1RoutedLeft} ] || [ ! -f ${v1RoutedRight} ]; then
-                echo "ERROR: v1/routed/keyboard-left.kicad_pcb or -right.kicad_pcb"
-                echo "is missing. Complete Stage 4 of docs/v1-build-recipe.md"
-                echo "(route the scaffold) before running v1-pcba."
-                exit 1
-              fi
-              mkdir -p $out
-              for half in left right; do
-                src=${v1RoutedLeft}
-                [ "$half" = right ] && src=${v1RoutedRight}
-                kicad-cli pcb export pos "$src" \
-                  -o "$out/thenar-v1-$half-cpl.csv" \
-                  --format csv --units mm --side both \
-                  --use-drill-file-origin
-                # Re-shape header to JLCPCB's expected column names.
-                # KiCad emits: Ref,Val,Package,PosX,PosY,Rot,Side
-                # JLCPCB wants: Designator,Mid X,Mid Y,Layer,Rotation
-                awk -F, 'NR==1 {
-                  print "Designator,Mid X,Mid Y,Layer,Rotation"; next
-                } { gsub(/"/, "")
-                   side = $7 == "top" ? "T" : "B"
-                   printf "%s,%s,%s,%s,%s\n", $1, $4, $5, side, $6
-                }' "$out/thenar-v1-$half-cpl.csv" > "$out/thenar-v1-$half-cpl.jlc.csv"
-              done
-              runHook postBuild
-            '';
-            dontInstall = true;
-          };
         in
         {
           inherit scaffold gerbers gerbers-zip switchplate-step switchplate-stl
                   switchplate-cal-stl case-stl
                   check-routing-drift kicadPython routed-auto freerouting
-                  firmware firmware-left firmware-right flash
-                  v1-scaffold v1-firmware v1-firmware-left v1-firmware-right
-                  v1-flash v1-pcba;
+                  firmware firmware-left firmware-right flash;
           default = gerbers-zip;
         });
 
@@ -494,10 +355,6 @@
         flash = {
           type = "app";
           program = "${self.packages.${pkgs.system}.flash}/bin/flash";
-        };
-        v1-flash = {
-          type = "app";
-          program = "${self.packages.${pkgs.system}.v1-flash}/bin/v1-flash";
         };
       });
 

@@ -48,9 +48,8 @@ dwell time (the ring steals heat). Prefer a nylon screw or washer at
 that position.
 
 **v2 fix**: Make the hole footprint NPTH (no copper), and/or move the
-`screw_top_right` anchor a couple mm away from the key. The same
-`hole.js` wrapper was copied into `v1/ergogen/footprints/` — fix it
-there too.
+`screw_top_right` anchor a couple mm away from the key. The same `hole.js` wrapper was copied into the hypothenar repo
+(github.com/lytedev/hypothenar-keyboard) — fix it there too.
 
 ### EVQWGD001 rotation needs CONFIG_EC11 (fixed, kept for the record)
 
