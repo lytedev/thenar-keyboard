@@ -329,6 +329,21 @@
             zephyrDepsHash = "sha256-gsqiTDJLAihVyBXVFlgXwqRmlREcFJctKpl4tEWmVlY=";
           };
 
+          # Debug variant: official zmk-usb-logging snippet - each half
+          # exposes a USB serial console with split-BLE + kscan logs.
+          # Higher power draw; for bring-up diagnosis only.
+          firmware-debug = zmk-nix.legacyPackages.${pkgs.system}.buildSplitKeyboard {
+            name = "thenar-firmware";
+            src = nixpkgs.lib.sourceFilesBySuffices self [
+              ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+              ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig"
+            ];
+            board = "nice_nano";
+            shield = "thenar_%PART% nice_view_adapter nice_view";
+            snippets = [ "zmk-usb-logging" ];
+            zephyrDepsHash = "sha256-gsqiTDJLAihVyBXVFlgXwqRmlREcFJctKpl4tEWmVlY=";
+          };
+
           firmware-left = pkgs.runCommand "thenar-left.uf2" { } ''
             cp ${firmware}/zmk_left.uf2 $out
           '';
@@ -375,7 +390,7 @@
           inherit scaffold gerbers gerbers-zip switchplate-step switchplate-stl
                   switchplate-cal-stl case-stl
                   check-routing-drift kicadPython routed-auto freerouting
-                  firmware firmware-reset firmware-left firmware-right flash;
+                  firmware firmware-reset firmware-debug firmware-left firmware-right flash;
           default = gerbers-zip;
         });
 
