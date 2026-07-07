@@ -310,6 +310,25 @@
             zephyrDepsHash = "sha256-gsqiTDJLAihVyBXVFlgXwqRmlREcFJctKpl4tEWmVlY=";
           };
 
+          # Settings-reset image (wipes BLE bonds; flash, boot once, then
+          # reflash real firmware - the fix for split-pairing weirdness).
+          # NOTE: name deliberately matches the main firmware: zmk-nix
+          # names its west-deps fixed-output derivation "\${name}-west-deps",
+          # so sharing the name makes this build reuse the ALREADY-FETCHED
+          # ~1.5GB deps tree instead of re-fetching identical content under
+          # a new store name. (Upstream zmk-nix would ideally key deps by
+          # manifest hash, not consumer name.)
+          firmware-reset = zmk-nix.legacyPackages.${pkgs.system}.buildKeyboard {
+            name = "thenar-firmware";
+            src = nixpkgs.lib.sourceFilesBySuffices self [
+              ".board" ".cmake" ".conf" ".defconfig" ".dts" ".dtsi"
+              ".json" ".keymap" ".overlay" ".shield" ".yml" "_defconfig"
+            ];
+            board = "nice_nano";
+            shield = "settings_reset";
+            zephyrDepsHash = "sha256-gsqiTDJLAihVyBXVFlgXwqRmlREcFJctKpl4tEWmVlY=";
+          };
+
           firmware-left = pkgs.runCommand "thenar-left.uf2" { } ''
             cp ${firmware}/zmk_left.uf2 $out
           '';
@@ -356,7 +375,7 @@
           inherit scaffold gerbers gerbers-zip switchplate-step switchplate-stl
                   switchplate-cal-stl case-stl
                   check-routing-drift kicadPython routed-auto freerouting
-                  firmware firmware-left firmware-right flash;
+                  firmware firmware-reset firmware-left firmware-right flash;
           default = gerbers-zip;
         });
 
