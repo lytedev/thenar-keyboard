@@ -15,6 +15,13 @@ module.exports = {
         (fp_text reference "${p.ref}" (at 0 0) (layer F.SilkS) ${p.ref_hide} (effects (font (size 1.27 1.27) (thickness 0.15))))
         (fp_text value "" (at 0 0) (layer F.SilkS) hide (effects (font (size 1.27 1.27) (thickness 0.15))))
         
+        ${''/* cathode "K" markers, one per face; the B copy is justify-mirrored
+              so it reads as a proper K when the board is viewed from the back.
+              Both sit at the cathode-bar end (x=-0.35, the pad-1/"to" side):
+              on either face, place the diode band at the end marked K. */}
+        (fp_text user K (at -0.35 1.05 ${p.rot}) (layer F.SilkS) (effects (font (size 0.6 0.6) (thickness 0.1))))
+        (fp_text user K (at -0.35 1.05 ${p.rot}) (layer B.SilkS) (effects (font (size 0.6 0.6) (thickness 0.1)) (justify mirror)))
+
         ${''/* diode symbols */}
         (fp_line (start 0.25 0) (end 0.75 0) (layer F.SilkS) (width 0.1))
         (fp_line (start 0.25 0.4) (end -0.35 0) (layer F.SilkS) (width 0.1))

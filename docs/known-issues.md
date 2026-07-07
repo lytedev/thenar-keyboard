@@ -65,6 +65,44 @@ after config surgery, first check that file still exists and that the
 build log contains `ZMK Config Kconfig: .../config/thenar.conf` and
 `ec11.c.obj`.
 
+### Right half assembled with all 28 diodes reversed (assembly pitfall — the silk is correct)
+
+**Symptom**: On the right half (the same reversible PCB flipped over,
+components populated on the back face), every key is dead — zero keys
+scan — while the encoder works fine. Cause: all 28 diodes were
+installed reversed. The initial diagnosis blamed the footprint
+(`diode.js` draws B.SilkS at the same coordinates as F.SilkS, so the
+back arrow *looks* reversed compared to the front render), but that
+turned out to be wrong: a mirrored view flips the pads together with
+the silk, so the cathode bar stays adjacent to the same pad/net on
+both faces. Identical-coordinate back silk is exactly what upstream
+ergogen and ceoloide's footprint library ship, and it indicates the
+correct polarity when read from the back.
+
+**Where**: Not in the codebase — it's an assembly-process trap. On a
+flipped board the *correct* diode orientation looks mirrored relative
+to the other half. Orienting the back-face diodes by visual match
+(making the arrows/bands point the same way as the working left half,
+or as a front-view render) reverses every one of them.
+
+**Current workaround**: On the already-built right half, rotate all 28
+diodes 180°. When assembling a back face, orient by **bar-to-pad
+adjacency** — the component's cathode band goes at the end where the
+silk bar sits, next to whichever pad that is — never by remembered
+arrow direction. Correctly built halves LOOK mirrored to each other.
+
+**Verification (5-second test)**: Flip the working left half over. Its
+bare back face shows the B.SilkS arrows beside diodes whose bands are
+known good; the back-silk bar sits at the same end as each working
+diode's band, proving the back silk indicates correct polarity.
+
+**Hardening (in tree)**: `thenar/ergogen/footprints/diode.js` now adds
+a small "K" cathode letter next to the bar on both faces (the B.SilkS
+copy is `justify mirror`ed so it reads as a proper K from the back).
+Future fabs get an unambiguous letter instead of geometry alone;
+already-fabbed v1.0 PCBs don't have the K, so use the adjacency rule
+above.
+
 ---
 
 (Add new deviations above this line as they're found.)
