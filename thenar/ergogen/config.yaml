@@ -21,6 +21,13 @@ units:
   switchplate_scrollwheel_cutout_y: 14.5
   switchplate_screw_diameter: 3.3
   switchplate_screw_hole: 2.2
+  # Reset button access notch. The kbd:ResetSW body+pads span 8.5x3.5mm
+  # centred 27mm from the mcu point, only ~1mm clear of the plate edge at
+  # nominal - found interfering on the first assembled unit. 12x9 centred
+  # on the button leaves >=1.75mm per side and deepens the MCU notch edge
+  # by ~1.8mm for finger/tweezer access.
+  switchplate_reset_cutout_x: 12
+  switchplate_reset_cutout_y: 9
 points:
   rotate: 5
   zones:
@@ -249,6 +256,18 @@ outlines:
     - what: circle
       where: [screw]
       radius: 0.5switchplate_screw_hole
+  _reset_cutout:
+    # Clearance notch over the reset button. Anchored exactly like the
+    # `reset` footprint below (mcu point + [10+mcu_height/2, 0] in the
+    # mcu's -90deg local frame); rotate 90 un-rotates the anchor so the
+    # rectangle's x/y match board x/y.
+    - what: rectangle
+      where:
+        ref: mcu_mcu
+        shift: [10+mcu_height/2, 0]
+        rotate: 90
+      size: [switchplate_reset_cutout_x, switchplate_reset_cutout_y]
+      bound: false
   switchplate:
     - what: outline
       name: _switchplate_base
@@ -257,6 +276,9 @@ outlines:
       operation: subtract
     - what: outline
       name: _scrollwheel_cutout
+      operation: subtract
+    - what: outline
+      name: _reset_cutout
       operation: subtract
   case:
     - what: outline
