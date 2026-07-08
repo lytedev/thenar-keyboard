@@ -18,13 +18,18 @@
 //   2. Miryoku scheme (layers 4-10): the Miryoku reference layers
 //      (https://github.com/manna-harbour/miryoku) for learning.
 //
-// Miryoku toggle path (either encoder, both halves):
+// Miryoku enter / base-swap / exit:
 //
-//   ENTER: hold Config (left inner thumb, 51) and click an encoder -
-//          the encoder presses on the Config layer are &tog Miryoku.
-//   EXIT : hold the Miryoku Media thumb (ESC, position 49) and click an
-//          encoder - the encoder presses on the Media layer are also
-//          &tog Miryoku.
+//   ENTER : hold Config (left inner thumb, 51) and click either encoder
+//           - the Config-layer encoder presses are &tog Miryoku. Lands
+//           on the Colemak-DH base (L_MIR).
+//   SWAP  : Miryoku's native base-swap. Hold the Media thumb (ESC, 49)
+//           and the RIGHT-hand top row has three &to keys:
+//             pos 19 (U) = Colemak-DH base   (&to L_MIR)
+//             pos 20 (I) = QWERTY base        (&to L_MQWY)
+//             pos 18 (Y) = exit to regular Iris (&to L_BASE)
+//   EXIT  : the same Media-thumb + pos-18 key (&to L_BASE) drops back to
+//           the normal Iris keymap.
 //
 // The BT layer (11) sits on top of everything and is reachable from both
 // schemes: Iris via Adjust position 11 (&mo, top-right), Miryoku via the
@@ -48,7 +53,11 @@
 // 3 thumbs; thenar halves are 4x6 + 2 mods + 2 thumbs + encoder press):
 //
 //   left,  outer->inner (48 49 50 51): LGUI  SPACE  MO(Lower)  MO(Config)
-//   right, left->right  (52 53 54 55): RET  BSPC  SPACE  LALT
+//   right, positions   (52 53 54 55): LALT SPACE MO(Config) RET
+//     (physical left->right on the right half reads 55 54 53 52 =
+//      RET MO(Config) SPACE LALT, mirroring the left half - confirmed
+//      against Daniel's on-hardware observation, not assumed. Backspace
+//      lives on the top-row corners; the freed thumb holds Config/Raise.)
 //
 // "Config" is the Raise/MO(3) layer of his VIA config. It lives ONLY on
 // the left inner thumb (51); the right inner thumb is Enter with
@@ -69,17 +78,18 @@
 //   - 3x5 alphas centered on the main block: outer columns (pinky-outer)
 //     and the whole number row are &none, per Miryoku's "unused keys do
 //     nothing" convention.
-//   - Alphas are Miryoku's default Colemak-DH. To switch to QWERTY alphas,
-//     replace the alpha keys on mir_base with QWERTY in the same 3x5
-//     arrangement and move the home-row mods to A/S/D/F and J/K/L/SEMI
-//     (keep the same GACS order: GUI outermost, then Alt, Ctrl, Shift
-//     innermost).
-//   - Miryoku's 3 thumb keys per hand sit on index-mod + both thumbs:
-//     left 49/50/51 = ESC(Media)/SPC(Nav)/TAB(Mouse), right 52/53/54 =
-//     RET(Sym)/BSPC(Num)/DEL(Fun) - same outer->inner order as Miryoku.
-//   - Miryoku's Button layer and base-swap keys (to TAP/EXTRA/BASE) are
-//     omitted -> &none. Clipboard keys use Ctrl-combos (LC(Z) etc.)
-//     instead of the AC_* usages for better OS compatibility.
+//   - Two alpha bases: Colemak-DH (mir_base, L_MIR) and QWERTY
+//     (mir_qwerty, L_MQWY), swapped via the Media-layer base-swap keys
+//     above. Both carry GACS home-row mods (GUI/Alt/Ctrl/Shift,
+//     outer->inner) and RALT on the bottom-row X and DOT.
+//   - Miryoku's 3 thumb keys per hand occupy the OUTER three thumb
+//     positions so Nav/SPACE (49) shares the physical key with Iris
+//     SPACE: left 48/49/50 = ESC(Media)/SPC(Nav)/TAB(Mouse), right
+//     53/54/55 = RET(Sym)/BSPC(Num)/DEL(Fun). The innermost thumbs
+//     (51 left, 52 right) are unused in Miryoku.
+//   - Base-swap keys ARE implemented (Media top row, see above).
+//     Miryoku's Button layer is omitted; clipboard keys use Ctrl-combos
+//     (LC(Z) etc.) instead of AC_* usages for better OS compatibility.
 //   - The Mouse layer needs CONFIG_ZMK_POINTING=y (set in thenar.conf).
 //
 // Encoders:
@@ -109,6 +119,7 @@
 #define L_MSYM  9
 #define L_MFUN  10
 #define L_BT    11
+#define L_MQWY  12
 
 / {
     behaviors {
@@ -136,6 +147,17 @@
         };
     };
 
+    // Tri-layer: holding BOTH Lower and Config(Raise) activates the
+    // Adjust layer (nav/arrows), the QMK "adjust layer" pattern. Natural
+    // chord: left-thumb Lower (50) + right-thumb Config (54).
+    conditional_layers {
+        compatible = "zmk,conditional-layers";
+        tri_layer {
+            if-layers = <L_LOWER L_RAISE>;
+            then-layer = <L_ADJ>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
@@ -150,7 +172,7 @@
 &kp TAB        &kp Q  &kp W  &kp E  &kp R  &kp T                                                 &kp Y  &kp U  &kp I     &kp O   &kp P    &kp BSPC
 &mt LCTRL ESC  &kp A  &kp S  &kp D  &kp F  &kp G                                                 &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
 &kp LSHFT      &kp Z  &kp X  &kp C  &kp V  &kp B                                                 &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RET
-                             &kp LGUI &kp SPACE &mo L_LOWER &mo L_RAISE          &kp RET &kp BSPC &kp SPACE &kp LALT
+                             &kp LGUI &kp SPACE &mo L_LOWER &mo L_RAISE          &kp LALT &kp SPACE &mo L_RAISE &kp RET
 &kp K_MUTE &sl L_RAISE
             >;
 
@@ -204,13 +226,19 @@
         // scheme) and HOME/END on 54/55 (the Iris inner-extras displaced
         // from base by the new thumb-arc spec).
         adjust_layer {
-            display-name = "Adj";
+            display-name = "Nav";
+            // Faithful port of the Iris CE [LA] layer (his tri-layer,
+            // reached by holding Lower+Config): mouse + wheel on the left,
+            // arrows on the right home row (HJKL), HOME/PGDN/PGUP/END on
+            // the right bottom row, media on the right top row.
+            // KC_ACL0-2 (mouse accel) have no ZMK equivalent -> &none.
+            // &mo L_BT kept on pos 11 for BT-layer access (Iris scheme).
             bindings = <
-&kp ESC   &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &mo L_BT
-&kp TAB   &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
-&kp LCTRL &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
-&trans    &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
-                        &trans &trans &trans &trans                           &trans &trans &kp HOME &kp END
+&trans    &none      &none        &none      &trans        &trans                                &trans &trans   &trans   &trans   &trans    &mo L_BT
+&trans    &mkp LCLK  &mmv MOVE_UP &mkp RCLK  &msc SCRL_UP  &trans                                &kp C_PREV &kp C_VOL_DN &kp C_PP &kp C_VOL_UP &kp C_NEXT &trans
+&trans    &mmv MOVE_LEFT &mmv MOVE_DOWN &mmv MOVE_RIGHT &msc SCRL_DOWN &trans                    &kp LEFT &kp DOWN &kp UP   &kp RIGHT &trans   &trans
+&trans    &trans     &trans       &trans     &trans        &trans                                &kp HOME &kp PG_DN &kp PG_UP &kp END  &trans   &trans
+                        &trans &trans &trans &trans                           &trans &trans &trans &trans
 &trans &trans
             >;
 
@@ -230,7 +258,29 @@
 &none &kp Q        &kp W        &kp F         &kp P         &kp B                                &kp J  &kp L         &kp U         &kp Y        &kp SQT      &none
 &none &hm LGUI A   &hm LALT R   &hm LCTRL S   &hm LSHFT T   &kp G                                &kp M  &hm LSHFT N   &hm LCTRL E   &hm LALT I   &hm LGUI O   &none
 &none &kp Z        &hm RALT X   &kp C         &kp D         &kp V                                &kp K  &kp H         &kp COMMA     &hm RALT DOT &kp FSLH     &none
-                   &none &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB          &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL &none
+                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &none &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL
+&kp K_MUTE &kp K_MUTE
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // Miryoku with QWERTY alphas - for learning the Miryoku layer
+        // system without also relearning letter positions. Same thumbs
+        // and layer taps as the Colemak-DH mir_base; only the 3x5 alpha
+        // block + home-row-mod host keys differ. GACS home-row mods on
+        // A/S/D/F + J/K/L/; (GUI Alt Ctrl Shift, outer->inner), RALT on
+        // X and . like Miryoku's default. Enter: Config + RIGHT encoder
+        // click (Config + LEFT click enters Colemak-DH). Exit: click
+        // either encoder here (&tog L_MQWY).
+        mir_qwerty_layer {
+            display-name = "MirQWTY";
+            bindings = <
+&none &none        &none        &none         &none         &none                                &none  &none         &none         &none        &none        &none
+&none &kp Q        &kp W        &kp E         &kp R         &kp T                                &kp Y  &kp U         &kp I         &kp O        &kp P        &none
+&none &hm LGUI A   &hm LALT S   &hm LCTRL D   &hm LSHFT F   &kp G                                &kp H  &hm LSHFT J   &hm LCTRL K   &hm LALT L   &hm LGUI SEMI &none
+&none &kp Z        &hm RALT X   &kp C         &kp V         &kp B                                &kp N  &kp M         &kp COMMA     &hm RALT DOT &kp FSLH     &none
+                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &none &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL
 &kp K_MUTE &kp K_MUTE
             >;
 
@@ -244,7 +294,7 @@
 &trans &bootloader &none     &none     &none     &none                                           &kp LC(Y)  &kp LC(V) &kp LC(C)  &kp LC(X) &kp LC(Z)  &trans
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &caps_word &kp LEFT  &kp DOWN   &kp UP    &kp RIGHT  &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &kp INS    &kp HOME  &kp PG_DN  &kp PG_UP &kp END    &trans
-                             &trans &none &trans &none                       &kp RET &kp BSPC &kp DEL &trans
+                             &none &trans &none &trans                       &trans &kp RET &kp BSPC &kp DEL
 &trans &trans
             >;
 
@@ -259,7 +309,7 @@
 &trans &bootloader &none     &none     &none     &none                                           &kp LC(Y) &kp LC(V)       &kp LC(C)       &kp LC(X)     &kp LC(Z)       &trans
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &none     &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_UP  &mmv MOVE_RIGHT &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &none     &msc SCRL_LEFT  &msc SCRL_DOWN  &msc SCRL_UP  &msc SCRL_RIGHT &trans
-                             &trans &none &none &trans                       &mkp RCLK &mkp LCLK &mkp MCLK &trans
+                             &none &none &trans &trans                       &trans &mkp RCLK &mkp LCLK &mkp MCLK
 &trans &trans
             >;
 
@@ -273,12 +323,12 @@
         mir_media_layer {
             display-name = "Media";
             bindings = <
-&trans &trans      &trans    &trans    &trans    &trans                                          &trans       &trans        &trans        &trans        &trans       &trans
+&trans &trans      &trans    &trans    &trans    &trans                                          &to L_BASE   &to L_MIR     &to L_MQWY    &trans        &trans       &trans
 &trans &bootloader &none     &none     &none     &none                                           &none        &none         &none         &none         &none        &trans
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &mo L_BT     &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT   &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &out OUT_TOG &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3 &trans
-                             &trans &trans &none &none                       &kp C_STOP &kp C_PP &kp C_MUTE &trans
-&tog L_MIR &tog L_MIR
+                             &trans &none &none &trans                       &trans &kp C_STOP &kp C_PP &kp C_MUTE
+&kp K_MUTE &kp K_MUTE
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
@@ -291,7 +341,7 @@
 &trans &kp LBKT  &kp N7 &kp N8 &kp N9 &kp RBKT                                                   &none  &none     &none     &none    &bootloader &trans
 &trans &kp SEMI  &kp N4 &kp N5 &kp N6 &kp EQUAL                                                  &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
 &trans &kp GRAVE &kp N1 &kp N2 &kp N3 &kp BSLH                                                   &none  &none     &none     &kp RALT &none       &trans
-                        &trans &kp DOT &kp N0 &kp MINUS                      &none &trans &none &trans
+                        &kp DOT &kp N0 &kp MINUS &trans                      &trans &none &trans &none
 &trans &trans
             >;
 
@@ -305,7 +355,7 @@
 &trans &kp LBRC  &kp AMPS &kp ASTRK &kp LPAR  &kp RBRC                                           &none  &none     &none     &none    &bootloader &trans
 &trans &kp COLON &kp DLLR &kp PRCNT &kp CARET &kp PLUS                                           &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
 &trans &kp TILDE &kp EXCL &kp AT    &kp HASH  &kp PIPE                                           &none  &none     &none     &kp RALT &none       &trans
-                          &trans &kp LPAR &kp RPAR &kp UNDER                 &trans &none &none &trans
+                          &kp LPAR &kp RPAR &kp UNDER &trans                 &trans &trans &none &none
 &trans &trans
             >;
 
@@ -319,7 +369,7 @@
 &trans &kp F12  &kp F7 &kp F8 &kp F9 &kp PSCRN                                                   &none  &none     &none     &none    &bootloader &trans
 &trans &kp F11  &kp F4 &kp F5 &kp F6 &kp SLCK                                                    &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
 &trans &kp F10  &kp F1 &kp F2 &kp F3 &kp PAUSE_BREAK                                             &none  &none     &none     &kp RALT &none       &trans
-                       &trans &kp K_APP &kp SPACE &kp TAB                    &none &none &trans &trans
+                       &kp K_APP &kp SPACE &kp TAB &trans                    &trans &none &none &trans
 &trans &trans
             >;
 
