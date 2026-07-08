@@ -36,7 +36,16 @@ RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5)                                 
 RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5)                                 RC(2,6) RC(2,7) RC(2,8) RC(2,9) RC(2,10) RC(2,11)
 RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5)                                 RC(3,6) RC(3,7) RC(3,8) RC(3,9) RC(3,10) RC(3,11)
                                 RC(4,1) RC(4,2) RC(4,3) RC(4,4) RC(4,10) RC(4,9) RC(4,8) RC(4,7)
-RC(4,5) RC(4,11)
+RC(4,5) RC(4,6)
+// ^ encoder presses: pos 56 = left (RC(4,5)), pos 57 = right (RC(4,6)).
+// Both encoder push switches wire to the inner (row5) net. On the left
+// half col-gpios are in normal order so inner = matrix col 5. On the
+// right half col-gpios are REVERSED (inner-first, to mirror the main
+// grid), so the inner net lands on matrix col 6 - NOT col 11. The
+// right encoder press was RC(4,11) until 2026-07 and silently dropped
+// (fired the unmapped RC(4,6)); the col-gpios reversal in the matrix
+// fix moved it and this entry wasn't updated to match. Verified by
+// USB-logging console capture.
         >;
     };
 
