@@ -17,8 +17,18 @@ module.exports = {
         
         ${''/* cathode "K" markers, one per face; the B copy is justify-mirrored
               so it reads as a proper K when the board is viewed from the back.
-              Both sit at the cathode-bar end (x=-0.35, the pad-1/"to" side):
-              on either face, place the diode band at the end marked K. */}
+              Both sit at the cathode-bar end (x=-0.35, the pad-1/"to" side).
+
+              POLARITY (derived from the netlist + ZMK's kscan_gpio_matrix.c,
+              hardware-verified during the 2026-07 right-half bring-up):
+              pad 1 carries the "to" net (col0..col4, the per-visual-row
+              nets on MCU pins 5-9). With diode-direction "col2row" the ZMK
+              driver SENSES row-gpios (those colN pins) and DRIVES col-gpios
+              (the row0..row5 switch-column nets), so scan current runs
+              switch -> diode -> pad 1 and the cathode band belongs at the
+              bar/K end on EITHER face. Correctly built halves LOOK mirrored
+              to each other: trust the local bar/K, never a comparison with
+              the other half or a front-view render. */}
         (fp_text user K (at -0.35 1.05 ${p.rot}) (layer F.SilkS) (effects (font (size 0.6 0.6) (thickness 0.1))))
         (fp_text user K (at -0.35 1.05 ${p.rot}) (layer B.SilkS) (effects (font (size 0.6 0.6) (thickness 0.1)) (justify mirror)))
 

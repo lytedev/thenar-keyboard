@@ -65,43 +65,73 @@ after config surgery, first check that file still exists and that the
 build log contains `ZMK Config Kconfig: .../config/thenar.conf` and
 `ec11.c.obj`.
 
-### Right half assembled with all 28 diodes reversed (assembly pitfall — the silk is correct)
+### Right half "all 28 diodes reversed" was a misdiagnosis — the diodes AND the silk were correct; the old right-half firmware scanned backwards
 
-**Symptom**: On the right half (the same reversible PCB flipped over,
-components populated on the back face), every key is dead — zero keys
-scan — while the encoder works fine. Cause: all 28 diodes were
-installed reversed. The initial diagnosis blamed the footprint
-(`diode.js` draws B.SilkS at the same coordinates as F.SilkS, so the
-back arrow *looks* reversed compared to the front render), but that
-turned out to be wrong: a mirrored view flips the pads together with
-the silk, so the cathode bar stays adjacent to the same pad/net on
-both faces. Identical-coordinate back silk is exactly what upstream
-ergogen and ceoloide's footprint library ship, and it indicates the
-correct polarity when read from the back.
+**Symptom (as observed at the time)**: On the right half (the same
+reversible PCB flipped over), every key was dead — zero keys scanned —
+while the encoder worked fine. A bench experiment then appeared to
+convict the diodes: a diode installed with its band *opposite* the
+soldering face's silk scanned, while diodes following the silk did not
+conduct "in the scan direction". Two sessions of analysis flip-flopped
+between "the back silk is unmirrored and therefore wrong" and "the silk
+is correct, the assembly is reversed" (the previous version of this
+entry). **Both causal stories were wrong.**
 
-**Where**: Not in the codebase — it's an assembly-process trap. On a
-flipped board the *correct* diode orientation looks mirrored relative
-to the other half. Orienting the back-face diodes by visual match
-(making the arrows/bands point the same way as the working left half,
-or as a front-view render) reverses every one of them.
+**What was actually broken**: the pre-`fdf3b3df`
+`thenar_right.overlay` had the kscan pin roles swapped. Per the ZMK
+driver source (`kscan_gpio_matrix.c`: for `diode-direction = "col2row"`
+the macro `COND_DIODE_DIR` makes `.inputs = row-gpios` and
+`.outputs = col-gpios` — i.e. **row-gpios are SENSED, col-gpios are
+DRIVEN**, which is also why stock shields like the corne put the
+pull-downs on row-gpios), the old right overlay *drove* pins 9/8/7/6/5/4
+(nets col4..col0 plus the display CS line) and *sensed* pins
+18/15/14/16/10 (nets row1..row5). That is exactly backwards from the
+board's diode direction, so:
 
-**Current workaround**: On the already-built right half, rotate all 28
-diodes 180°. When assembling a back face, orient by **bar-to-pad
-adjacency** — the component's cathode band goes at the end where the
-silk bar sits, next to whichever pad that is — never by remembered
-arrow direction. Correctly built halves LOOK mirrored to each other.
+- every correctly-installed diode blocked the (reversed) scan current →
+  zero keys, encoder unaffected;
+- the one diode deliberately flipped during debugging conducted in that
+  reversed direction → "band opposite the silk works", the observation
+  that spawned the reversed-diodes myth.
 
-**Verification (5-second test)**: Flip the working left half over. Its
-bare back face shows the B.SilkS arrows beside diodes whose bands are
-known good; the back-silk bar sits at the same end as each working
-diode's band, proving the back silk indicates correct polarity.
+A contributing confusion that survives in the overlay comment blocks:
+they label row-gpios as "driven outputs" and col-gpios as "sensed
+inputs". **Those comments are backwards** relative to the driver (fix
+pending — out of scope for the change that corrected this entry).
 
-**Hardening (in tree)**: `thenar/ergogen/footprints/diode.js` now adds
-a small "K" cathode letter next to the bar on both faces (the B.SilkS
-copy is `justify mirror`ed so it reads as a proper K from the back).
-Future fabs get an unambiguous letter instead of geometry alone;
-already-fabbed v1.0 PCBs don't have the K, so use the adjacency rule
-above.
+**What the silk actually indicates**: the correct cathode end, on
+**both** faces, including already-fabbed v1.0 boards. Derivation from
+the generated netlist: diode pad 1 (x=-1.65, present on F.Cu and B.Cu)
+carries the `to`/row_net (col0..col4 — the nets on MCU pins 5-9, the
+sensed row-gpios); pad 2 carries the per-key `colrow` net to the
+switch and on to the driven row0..row5 nets. Scan current runs
+driven rowN → switch → colrow → diode → sensed colN, so the cathode
+belongs at pad 1 — and the silk bar (x=-0.35) sits adjacent to pad 1
+on both F.SilkS and B.SilkS. Renders of the front face and the
+mirrored back face both show the arrow pointing at, and the bar/K
+marking, the pad-1/colN end. No face of any fab has misleading silk.
+
+**The rule (one sentence)**: On either face of the board, solder every
+matrix diode with its cathode band at the end marked by that face's
+silk bar / arrow tip (the end labeled "K" on post-v1.0 fabs) — the pad
+wired to a col0..col4 net — and never orient by comparing against the
+other half or a front-view render (correctly built halves LOOK
+mirrored to each other).
+
+**Current state / workaround**: none needed for assembly — follow the
+silk. Do **not** apply this entry's previous workaround ("rotate all
+28 right-half diodes 180°"): the installed diodes were never reversed
+(the post-fix firmware types through them, which is only electrically
+possible with bands at the bar end), and rotating them would kill
+every key. If the single band-opposite test diode from the bring-up
+experiment is still installed, flip it back to match the silk — its
+key is dead under the corrected firmware.
+
+**Hardening (in tree)**: `thenar/ergogen/footprints/diode.js` adds a
+small "K" cathode letter next to the bar on both faces (the B.SilkS
+copy is `justify mirror`ed so it reads as a proper K from the back),
+and now carries the full polarity derivation in a comment. v1.0 PCBs
+predate the K; use the bar/arrow-tip rule above.
 
 ---
 
