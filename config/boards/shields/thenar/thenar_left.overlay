@@ -8,8 +8,11 @@
 &kscan0 {
     diode-direction = "col2row";
 
-    // "Matrix columns" in ZMK terms (driven outputs). These are the col0..col4
-    // nets in the ergogen config (one per matrix row: num/top/home/bottom/mod).
+    // SENSED INPUTS (hence the pull-downs). Driver-verified: with
+    // diode-direction col2row, kscan_gpio_matrix.c makes row-gpios the
+    // .inputs and col-gpios the .outputs - the OPPOSITE of what this
+    // comment used to claim. These pins carry the col0..col4 nets (one
+    // per visual row: num/top/home/bottom/mod).
     row-gpios
         = <&pro_micro 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col0 (num)
         , <&pro_micro 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col1 (top)
@@ -18,8 +21,10 @@
         , <&pro_micro 9 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>  // col4 (mod + thumb + scrollwheel)
         ;
 
-    // "Matrix rows" in ZMK terms (sensed inputs). These are the row0..row5
-    // nets (one per keyboard column: outer/pinky/ring/middle/index/inner).
+    // DRIVEN OUTPUTS (see above - the old comment had drive/sense
+    // backwards). These carry the row0..row5 nets (one per finger
+    // column: outer/pinky/ring/middle/index/inner). Diode cathodes
+    // face the col0..col4 nets = the silk bar / K end.
     col-gpios
         = <&pro_micro 19 GPIO_ACTIVE_HIGH>  // row0 (outer)
         , <&pro_micro 18 GPIO_ACTIVE_HIGH>  // row1 (pinky)
