@@ -17,8 +17,15 @@ units:
   screen_screw_diameter: 4
   screen_screw_hole: 2.2
   switchplate_switch_cutout: 14
-  switchplate_scrollwheel_cutout_x: 17.5
-  switchplate_scrollwheel_cutout_y: 14.5
+  # EVQWGD001 clearance, from the RollerEncoder footprint envelope: body
+  # silk x -8.4..8.4 / y +-7.4 (union of both reversible mounts) plus the
+  # wheel slot reaching x 9.8 / y +-7.6 on the +x (wheel) side. Margins
+  # are >=1mm per side; the wheel side runs to 12.5 so the cutout opens
+  # through the plate's outer edge at +11.5 (a closed rim there would be
+  # a <1mm unprintable sliver).
+  switchplate_scrollwheel_pad_side: 9.4
+  switchplate_scrollwheel_wheel_side: 12.5
+  switchplate_scrollwheel_cutout_y: 17.2
   switchplate_screw_diameter: 3.3
   switchplate_screw_hole: 2.2
   # Reset button access notch. The kbd:ResetSW body+pads span 8.5x3.5mm
@@ -248,9 +255,18 @@ outlines:
       size: switchplate_switch_cutout
       bound: false
   _scrollwheel_cutout:
+    # The encoder is asymmetric - pads toward the board centre, wheel
+    # overhanging the outer edge - but the old 17.5x14.5 rectangle was
+    # centred on the point, covering the wheel slot by ~1mm while leaving
+    # spare room on the pad side. Found on the first assembled unit (the
+    # plate had to be hand-cut at the wheel). Anchored to the scrollwheel
+    # zone point, shifted so the asymmetric margins land where the
+    # hardware is; see the switchplate_scrollwheel_* units.
     - what: rectangle
-      where: [scrollwheel]
-      size: [switchplate_scrollwheel_cutout_x, switchplate_scrollwheel_cutout_y]
+      where:
+        ref: scrollwheel_scrollwheel_scrollwheel
+        shift: [(switchplate_scrollwheel_wheel_side-switchplate_scrollwheel_pad_side)/2, 0]
+      size: [switchplate_scrollwheel_pad_side+switchplate_scrollwheel_wheel_side, switchplate_scrollwheel_cutout_y]
       bound: false
   _screw_holes:
     - what: circle
