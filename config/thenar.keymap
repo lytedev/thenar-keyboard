@@ -16,10 +16,15 @@
 //      layer 1 (a plain-ESC/TAB/LCTRL "gaming" overlay only reachable
 //      through QMK DF() keys) is not ported.
 //   2. Miryoku scheme (layers 4-10): the Miryoku reference layers
-//      (https://github.com/manna-harbour/miryoku) for learning, entered
-//      and exited with &tog on the SAME physical key: the right-half
-//      middle-finger mod key (position 55) toggles Miryoku on from Base
-//      and back off from Miryoku alpha.
+//      (https://github.com/manna-harbour/miryoku) for learning.
+//
+// Miryoku toggle path (either encoder, both halves):
+//
+//   ENTER: hold Config (left inner thumb, 51) and click an encoder -
+//          the encoder presses on the Config layer are &tog Miryoku.
+//   EXIT : hold the Miryoku Media thumb (ESC, position 49) and click an
+//          encoder - the encoder presses on the Media layer are also
+//          &tog Miryoku.
 //
 // The BT layer (11) sits on top of everything and is reachable from both
 // schemes: Iris via Adjust position 11 (&mo, top-right), Miryoku via the
@@ -39,27 +44,25 @@
 //
 //   enc   : 56 (left press)      |   57 (right press)
 //
-// Iris CE -> thenar mapping (Iris halves are 4x6 + 1 inner extra + 3
-// thumbs; thenar halves are 4x6 + 2 mods + 2 thumbs + encoder press).
-// The 4-key arc 48/49/50/51 carries the Iris left cluster in its Iris
-// left-to-right order, and 52/53/54 mirrors it on the right:
+// Thumb arcs, per Daniel's spec (Iris halves are 4x6 + 1 inner extra +
+// 3 thumbs; thenar halves are 4x6 + 2 mods + 2 thumbs + encoder press):
 //
-//   Iris left : LGUI      SPC      MO(lower)  [+ inner extra HOME]
-//   thenar    : 48=LGUI   50=SPC   51=MO      49=HOME
-//   Iris right: MO(raise) SPC      RALT       [+ inner extra END]
-//   thenar    : 52=MO     53=SPC   54=RALT    55=(spent on Miryoku tog)
+//   left,  outer->inner (48 49 50 51): LGUI  SPACE  MO(Lower)  MO(Config)
+//   right, left->right  (52 53 54 55): RET  BSPC  SPACE  LALT
+//
+// "Config" is the Raise/MO(3) layer of his VIA config. It lives ONLY on
+// the left inner thumb (51); the right inner thumb is Enter with
+// Backspace beside it (Daniel: "config thumb button to be enter on the
+// right and enter to be backspace").
 //
 // Compromises:
-//   - LGUI is the LEFT-MOST key of the arc (48), exactly like the
-//     outermost Iris left thumb. HOME (the Iris left inner-extra) takes
-//     49, between LGUI and the thumbs.
-//   - END (the Iris right inner-extra) loses its arc spot to the Miryoku
-//     toggle (55); it lives on Adjust position 55 instead.
+//   - HOME and END (the Iris inner row-4 extras) leave base entirely;
+//     they live on Adjust positions 54/55 instead.
 //   - Iris ESC_CTL (LCTL_T(KC_ESC)) becomes &mt LCTRL ESC. QMK's
 //     PERMISSIVE_HOLD is approximated by ZMK's default hold-tap timing.
 //   - VIA's Adjust layer is a nearly-empty overlay (plain ESC/TAB/LCTRL
-//     on the left outer column). Ported as-is, with two documented
-//     additions on transparent slots: &mo BT on 11 and END on 55.
+//     on the left outer column). Ported as-is, with documented additions
+//     on transparent slots: &mo BT on 11, HOME/END on 54/55.
 //
 // Miryoku notes:
 //
@@ -79,8 +82,16 @@
 //     instead of the AC_* usages for better OS compatibility.
 //   - The Mouse layer needs CONFIG_ZMK_POINTING=y (set in thenar.conf).
 //
-// Encoders: rotation = volume on every layer (BT layer right encoder =
-// prev/next track); press (56/57) = K_MUTE from both schemes.
+// Encoders:
+//   rotation: left = volume everywhere; right = PgDn/PgUp on Base
+//             (volume on the other layers; prev/next on BT).
+//   press   : left (56) = K_MUTE. Right (57) on Base = &sl Config
+//             (sticky): click once and the NEXT key is taken from the
+//             Config layer - no holding the clicked-in encoder, which
+//             is stiffer than a keyswitch. On the Config and Miryoku
+//             Media layers the presses are &tog Miryoku (the toggle
+//             path): hold LEFT Config (51) + click either encoder, or
+//             sticky-click the right encoder then click it again.
 //
 // NOTE: this file (config/thenar.keymap) is the keymap the build actually
 // uses - it OVERRIDES boards/shields/thenar/thenar.keymap per ZMK's
@@ -139,16 +150,20 @@
 &kp TAB        &kp Q  &kp W  &kp E  &kp R  &kp T                                                 &kp Y  &kp U  &kp I     &kp O   &kp P    &kp BSPC
 &mt LCTRL ESC  &kp A  &kp S  &kp D  &kp F  &kp G                                                 &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
 &kp LSHFT      &kp Z  &kp X  &kp C  &kp V  &kp B                                                 &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RET
-                             &kp LGUI &kp HOME &kp SPACE &mo L_LOWER          &mo L_RAISE &kp SPACE &kp RALT &tog L_MIR
-&kp K_MUTE &kp K_MUTE
+                             &kp LGUI &kp SPACE &mo L_LOWER &mo L_RAISE          &kp RET &kp BSPC &kp SPACE &kp LALT
+&kp K_MUTE &sl L_RAISE
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+            // Right rotation = paging. PG_DN sits in the same slot as
+            // C_VOL_DN on the other layers; flip the pair if the
+            // direction feels wrong.
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_DN PG_UP>;
         };
 
-        // VIA layer 2 (held on the left MO thumb): F-row over shifted
-        // symbols, _ + { } | and < > ? on the right hand. Adjust is on
-        // the left SPC position and the right MO position while held.
+        // VIA layer 2 (held on the Lower thumb, 50): F-row over shifted
+        // symbols, _ + { } | and < > ? on the right hand. While held,
+        // Adjust is on SPACE (49) - VIA's left-space binding - and on
+        // Config (51) - VIA's right-MO binding.
         lower_layer {
             display-name = "Lower";
             bindings = <
@@ -156,36 +171,38 @@
 &kp TILDE &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR  &kp BSPC
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp UNDER &kp PLUS  &kp LBRC &kp RBRC  &kp PIPE
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &trans    &kp LT    &kp GT   &kp QMARK &trans
-                                 &trans &trans &mo L_ADJ &trans                &mo L_ADJ &trans &trans &trans
+                                 &trans &mo L_ADJ &trans &mo L_ADJ                &trans &trans &trans &trans
 &trans &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
-        // VIA layer 3 (held on the right MO thumb): shifted symbols over
-        // the number row, - = [ ] \ on the right, INS on M. LALT on the
-        // left SPC position, Adjust on the left MO position while held.
+        // "Config" = VIA layer 3 (held on the left inner thumb, 51):
+        // shifted symbols over the number row, - = [ ] \ on the right,
+        // INS on M. While held: LALT on SPACE (49, VIA's left-space
+        // binding), Adjust on Lower (50, VIA's left-MO binding), and the
+        // encoder presses toggle the Miryoku scheme ON.
         raise_layer {
-            display-name = "Raise";
+            display-name = "Config";
             bindings = <
 &kp ESC   &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp BSPC
 &kp GRAVE &kp N1   &kp N2 &kp N3   &kp N4   &kp N5                                               &kp N6    &kp N7    &kp N8    &kp N9   &kp N0   &kp DEL
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp MINUS &kp EQUAL &kp LBKT &kp RBKT &kp BSLH
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp INS   &trans    &trans   &trans   &trans
-                                 &trans &trans &kp LALT &mo L_ADJ             &trans &trans &trans &trans
-&trans &trans
+                                 &trans &kp LALT &mo L_ADJ &trans             &trans &trans &trans &trans
+&tog L_MIR &tog L_MIR
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
-        // VIA layer 4 (Lower+Raise): the live config keeps this nearly
+        // VIA layer 4 (Lower+Config): the live config keeps this nearly
         // empty - just plain ESC/TAB/LCTRL on the left outer column
-        // (un-mod-tapped variants of the base column). Two additions on
+        // (un-mod-tapped variants of the base column). Additions on
         // transparent slots: &mo BT on 11 (BT layer access for the Iris
-        // scheme) and END on 55 (the Iris inner-extra displaced from base
-        // by the Miryoku toggle).
+        // scheme) and HOME/END on 54/55 (the Iris inner-extras displaced
+        // from base by the new thumb-arc spec).
         adjust_layer {
             display-name = "Adj";
             bindings = <
@@ -193,7 +210,7 @@
 &kp TAB   &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
 &kp LCTRL &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
 &trans    &trans &trans &trans &trans &trans                                                     &trans &trans &trans &trans &trans &trans
-                        &trans &trans &trans &trans                           &trans &trans &trans &kp END
+                        &trans &trans &trans &trans                           &trans &trans &kp HOME &kp END
 &trans &trans
             >;
 
@@ -201,7 +218,8 @@
         };
 
         // ------------------------------------------------------------------
-        // Miryoku scheme (toggle in/out with position 55)
+        // Miryoku scheme (enter: Config + encoder press;
+        //                 exit: Media thumb + encoder press)
         // ------------------------------------------------------------------
 
         // Miryoku alpha: Colemak-DH with GACS home-row mods.
@@ -212,7 +230,7 @@
 &none &kp Q        &kp W        &kp F         &kp P         &kp B                                &kp J  &kp L         &kp U         &kp Y        &kp SQT      &none
 &none &hm LGUI A   &hm LALT R   &hm LCTRL S   &hm LSHFT T   &kp G                                &kp M  &hm LSHFT N   &hm LCTRL E   &hm LALT I   &hm LGUI O   &none
 &none &kp Z        &hm RALT X   &kp C         &kp D         &kp V                                &kp K  &kp H         &kp COMMA     &hm RALT DOT &kp FSLH     &none
-                   &none &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB          &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL &tog L_MIR
+                   &none &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB          &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL &none
 &kp K_MUTE &kp K_MUTE
             >;
 
@@ -249,7 +267,9 @@
         };
 
         // Media; also the Miryoku-side door into the BT layer (right home
-        // inner key, where Miryoku puts ext-power toggle - thenar has none).
+        // inner key, where Miryoku puts ext-power toggle - thenar has
+        // none), and the Miryoku EXIT: its encoder presses toggle the
+        // Miryoku scheme back OFF.
         mir_media_layer {
             display-name = "Media";
             bindings = <
@@ -258,7 +278,7 @@
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &mo L_BT     &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT   &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &out OUT_TOG &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3 &trans
                              &trans &trans &none &none                       &kp C_STOP &kp C_PP &kp C_MUTE &trans
-&trans &trans
+&tog L_MIR &tog L_MIR
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
