@@ -2,6 +2,13 @@
 
 A column-staggered, fully-wireless split keyboard with scrollwheels — 56 keys (28 per half + thumb cluster). Choc-spaced, hotswap, Nice!Nano + ZMK.
 
+## Repositories
+
+- **Primary**: <https://git.lyte.dev/lytedev/thenar-keyboard>
+- **Mirror (GitHub)**: <https://github.com/lytedev/thenar-keyboard>
+- **Sibling model**: [hypothenar](https://git.lyte.dev/lytedev/hypothenar-keyboard) — the pick-and-place (JLCPCB PCBA) sibling: same layout, completely different electronics ([GitHub mirror](https://github.com/lytedev/hypothenar-keyboard))
+
+
 - Choc-spaced, hot-swappable
 - Scrollwheel (`EVQWGD001`) on both sides
 - Strong pinky stagger (0.66) and a 5 deg. pinky splay
