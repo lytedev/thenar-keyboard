@@ -2,10 +2,25 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/outputs.h>
+#include <dt-bindings/zmk/pointing.h>
 
-// Minimal default keymap for thenar. The keyboard ships with this so a
-// freshly-flashed Nice!Nano works out of the box - but most users will
-// fork this into their own zmk-config repo and write a real keymap.
+// Daniel's thenar keymap.
+//
+// Two schemes live side by side:
+//
+//   1. Iris scheme (layers 0-3): a port of the Iris CE layout from
+//      https://git.lyte.dev/lytedev/keyboards/src/branch/master/iris-ce
+//      (keymap.c + the live VIA config in iris_ce_rev__1.layout.json).
+//   2. Miryoku scheme (layers 4-10): the Miryoku reference layers
+//      (https://github.com/manna-harbour/miryoku) for learning, entered
+//      and exited with &tog on the SAME physical key: the right-half
+//      middle-finger mod key (position 55) toggles Miryoku on from Base
+//      and back off from Miryoku alpha.
+//
+// The BT layer (11) sits on top of everything and is reachable from both
+// schemes: Iris via Adjust position 0 (&mo), Miryoku via the Media layer
+// (hold ESC-thumb, then the right-home inner key), which also carries
+// Miryoku's own &bt profile keys.
 //
 // Position layout (58 positions, left half then right half, top-to-bottom):
 //
@@ -20,30 +35,265 @@
 //
 //   enc   : 56 (left press)      |   57 (right press)
 //
-// One layer (base) with QWERTY + bottom-row modifiers + thumb-cluster
-// space/enter/layer. Bluetooth pairing on the BT layer.
+// Iris CE -> thenar mapping compromises (Iris is 4x6 + 1 inner extra +
+// 3 thumbs per half; thenar is 4x6 + 2 mods + 2 thumbs + encoder press):
+//
+//   - Iris left thumbs (LGUI, SPC, MO-lower) shrink to 2 thumbs: SPC on 51,
+//     MO-lower on 50, and LGUI moves back to the index-finger mod key (49).
+//   - Iris right thumbs (LT(raise,ENT), SPC, RALT) likewise: LT(raise,ENT)
+//     on 52, SPC on 53, RALT on the index-finger mod key (54).
+//   - Iris inner-extra keys (HOME left / END right, per the VIA config):
+//     HOME lands on the left middle-finger mod key (48); END is DROPPED
+//     from base because position 55 is spent on the Miryoku toggle. END is
+//     still on the Adjust layer (Iris put HOME/PGDN/PGUP/END there anyway).
+//   - Iris ESC_CTL (LCTL_T(KC_ESC)) becomes &mt LCTRL ESC. QMK's
+//     PERMISSIVE_HOLD is approximated by ZMK's default hold-tap timing.
+//   - Iris Adjust KC_ACL0..2 (mouse accel steps) have no ZMK equivalent ->
+//     &none. Mouse move/wheel/buttons are mapped via ZMK pointing
+//     (CONFIG_ZMK_POINTING=y in thenar.conf).
+//   - Iris LC layer (QK_BOOT/RGB) is subsumed by the BT layer
+//     (&sys_reset/&bootloader; thenar has no RGB).
+//
+// Miryoku notes:
+//
+//   - 3x5 alphas centered on the main block: outer columns (pinky-outer)
+//     and the whole number row are &none, per Miryoku's "unused keys do
+//     nothing" convention.
+//   - Alphas are Miryoku's default Colemak-DH. To switch to QWERTY alphas,
+//     replace the alpha keys on mir_base with QWERTY in the same 3x5
+//     arrangement and move the home-row mods to A/S/D/F and J/K/L/SEMI
+//     (keep the same GACS order: GUI outermost, then Alt, Ctrl, Shift
+//     innermost).
+//   - Miryoku's 3 thumb keys per hand sit on index-mod + both thumbs:
+//     left 49/50/51 = ESC(Media)/SPC(Nav)/TAB(Mouse), right 52/53/54 =
+//     RET(Sym)/BSPC(Num)/DEL(Fun) - same outer->inner order as Miryoku.
+//   - Miryoku's Button layer and base-swap keys (to TAP/EXTRA/BASE) are
+//     omitted -> &none. Clipboard keys use Ctrl-combos (LC(Z) etc.)
+//     instead of the AC_* usages for better OS compatibility.
+//
+// Encoders: rotation = volume on every layer (BT layer right encoder =
+// prev/next track); press (56/57) = K_MUTE from both schemes.
 //
 // NOTE: this file (config/thenar.keymap) is the keymap the build actually
 // uses - it OVERRIDES boards/shields/thenar/thenar.keymap per ZMK's
 // user-config convention. Edit here, not there.
 
+#define L_BASE  0
+#define L_LOWER 1
+#define L_RAISE 2
+#define L_ADJ   3
+#define L_MIR   4
+#define L_MNAV  5
+#define L_MMOU  6
+#define L_MMED  7
+#define L_MNUM  8
+#define L_MSYM  9
+#define L_MFUN  10
+#define L_BT    11
+
 / {
+    behaviors {
+        // Miryoku-style home-row mod-tap: balanced flavor so a hold only
+        // registers when another key is both pressed and released inside
+        // the tapping term; quick-tap lets fast key repeats stay taps.
+        hm: home_row_mod {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <150>;
+            require-prior-idle-ms = <125>;
+        };
+
+        // Miryoku-style thumb layer-tap.
+        tl: thumb_layer_tap {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&mo>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <150>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
+
+        // ------------------------------------------------------------------
+        // Iris scheme
+        // ------------------------------------------------------------------
 
         base_layer {
             display-name = "Base";
             bindings = <
-&kp ESC   &kp N1   &kp N2 &kp N3 &kp N4 &kp N5                                         &kp N6 &kp N7 &kp N8    &kp N9  &kp N0   &kp BSPC
-&kp TAB   &kp Q    &kp W  &kp E  &kp R  &kp T                                          &kp Y  &kp U  &kp I     &kp O   &kp P    &kp BSLH
-&kp LCTL  &kp A    &kp S  &kp D  &kp F  &kp G                                          &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
-&kp LSFT  &kp Z    &kp X  &kp C  &kp V  &kp B                                          &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RSFT
-                                 &kp LALT &kp LGUI &mo 1 &kp SPACE  &kp ENTER &mo 1    &kp LBKT &kp RBKT
+&kp GRAVE      &kp N1 &kp N2 &kp N3 &kp N4 &kp N5                                                &kp N6 &kp N7 &kp N8    &kp N9  &kp N0   &kp BSPC
+&kp TAB        &kp Q  &kp W  &kp E  &kp R  &kp T                                                 &kp Y  &kp U  &kp I     &kp O   &kp P    &kp BSPC
+&mt LCTRL ESC  &kp A  &kp S  &kp D  &kp F  &kp G                                                 &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
+&kp LSHFT      &kp Z  &kp X  &kp C  &kp V  &kp B                                                 &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RET
+                             &kp HOME &kp LGUI &mo L_LOWER &kp SPACE     &lt L_RAISE RET &kp SPACE &kp RALT &tog L_MIR
 &kp K_MUTE &kp K_MUTE
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
+
+        // Iris "lower" (left thumb): F-row + shifted symbol row, brackets
+        // and punctuation on the right hand.
+        lower_layer {
+            display-name = "Lower";
+            bindings = <
+&kp F1    &kp F2   &kp F3 &kp F4   &kp F5   &kp F6                                               &kp F7    &kp F8    &kp F9   &kp F10  &kp F11   &kp F12
+&kp TILDE &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp BSPC
+&trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp UNDER &kp PLUS &kp LBRC &kp RBRC  &kp PIPE
+&trans    &trans   &trans &trans   &trans   &trans                                               &trans    &trans    &kp LT   &kp GT   &kp QMARK &trans
+                                 &trans &trans &trans &mo L_ADJ            &mo L_ADJ &kp RET &trans &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // Iris "raise" (right thumb): number row, unshifted symbols.
+        raise_layer {
+            display-name = "Raise";
+            bindings = <
+&kp ESC   &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp DEL
+&kp GRAVE &kp N1   &kp N2 &kp N3   &kp N4   &kp N5                                               &kp N6    &kp N7    &kp N8    &kp N9   &kp N0   &kp DEL
+&trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp MINUS &kp EQUAL &kp LBKT &kp RBKT &kp BSLH
+&trans    &trans   &trans &trans   &kp INS  &trans                                               &trans    &kp INS   &trans    &trans   &trans   &trans
+                                 &trans &trans &mo L_ADJ &kp LALT             &trans &mo L_ADJ &trans &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // Iris "adjust" (lower+raise): mouse on the left, media + arrows +
+        // nav cluster on the right. Position 0 reaches the BT layer.
+        adjust_layer {
+            display-name = "Adj";
+            bindings = <
+&mo L_BT &none          &none          &none           &none          &trans                     &trans      &trans        &trans     &trans        &trans      &trans
+&trans   &mkp LCLK      &mmv MOVE_UP   &mkp RCLK       &msc SCRL_UP   &trans                     &kp C_PREV  &kp C_VOL_DN  &kp C_PP   &kp C_VOL_UP  &kp C_NEXT  &trans
+&trans   &mmv MOVE_LEFT &mmv MOVE_DOWN &mmv MOVE_RIGHT &msc SCRL_DOWN &trans                     &kp LEFT    &kp DOWN      &kp UP     &kp RIGHT     &trans      &trans
+&trans   &trans         &trans         &trans          &trans         &trans                     &kp HOME    &kp PG_DN     &kp PG_UP  &kp END       &trans      &trans
+                                       &trans &trans &trans &trans                &trans &trans &trans &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // ------------------------------------------------------------------
+        // Miryoku scheme (toggle in/out with position 55)
+        // ------------------------------------------------------------------
+
+        // Miryoku alpha: Colemak-DH with GACS home-row mods.
+        mir_base_layer {
+            display-name = "Miryoku";
+            bindings = <
+&none &none        &none        &none         &none         &none                                &none  &none         &none         &none        &none        &none
+&none &kp Q        &kp W        &kp F         &kp P         &kp B                                &kp J  &kp L         &kp U         &kp Y        &kp SQT      &none
+&none &hm LGUI A   &hm LALT R   &hm LCTRL S   &hm LSHFT T   &kp G                                &kp M  &hm LSHFT N   &hm LCTRL E   &hm LALT I   &hm LGUI O   &none
+&none &kp Z        &hm RALT X   &kp C         &kp D         &kp V                                &kp K  &kp H         &kp COMMA     &hm RALT DOT &kp FSLH     &none
+                   &none &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB          &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL &tog L_MIR
+&kp K_MUTE &kp K_MUTE
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        mir_nav_layer {
+            display-name = "Nav";
+            bindings = <
+&trans &trans      &trans    &trans    &trans    &trans                                          &trans     &trans    &trans     &trans    &trans     &trans
+&trans &bootloader &none     &none     &none     &none                                           &kp LC(Y)  &kp LC(V) &kp LC(C)  &kp LC(X) &kp LC(Z)  &trans
+&trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &caps_word &kp LEFT  &kp DOWN   &kp UP    &kp RIGHT  &trans
+&trans &none       &kp RALT  &none     &none     &none                                           &kp INS    &kp HOME  &kp PG_DN  &kp PG_UP &kp END    &trans
+                             &trans &none &trans &none                       &kp RET &kp BSPC &kp DEL &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // Mouse via ZMK pointing (enabled in thenar.conf).
+        mir_mouse_layer {
+            display-name = "Mouse";
+            bindings = <
+&trans &trans      &trans    &trans    &trans    &trans                                          &trans    &trans          &trans          &trans        &trans          &trans
+&trans &bootloader &none     &none     &none     &none                                           &kp LC(Y) &kp LC(V)       &kp LC(C)       &kp LC(X)     &kp LC(Z)       &trans
+&trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &none     &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_UP  &mmv MOVE_RIGHT &trans
+&trans &none       &kp RALT  &none     &none     &none                                           &none     &msc SCRL_LEFT  &msc SCRL_DOWN  &msc SCRL_UP  &msc SCRL_RIGHT &trans
+                             &trans &none &none &trans                       &mkp RCLK &mkp LCLK &mkp MCLK &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // Media; also the Miryoku-side door into the BT layer (right home
+        // inner key, where Miryoku puts ext-power toggle - thenar has none).
+        mir_media_layer {
+            display-name = "Media";
+            bindings = <
+&trans &trans      &trans    &trans    &trans    &trans                                          &trans       &trans        &trans        &trans        &trans       &trans
+&trans &bootloader &none     &none     &none     &none                                           &none        &none         &none         &none         &none        &trans
+&trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &mo L_BT     &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT   &trans
+&trans &none       &kp RALT  &none     &none     &none                                           &out OUT_TOG &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3 &trans
+                             &trans &trans &none &none                       &kp C_STOP &kp C_PP &kp C_MUTE &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        mir_num_layer {
+            display-name = "Num";
+            bindings = <
+&trans &trans    &trans &trans &trans &trans                                                     &trans &trans    &trans    &trans   &trans      &trans
+&trans &kp LBKT  &kp N7 &kp N8 &kp N9 &kp RBKT                                                   &none  &none     &none     &none    &bootloader &trans
+&trans &kp SEMI  &kp N4 &kp N5 &kp N6 &kp EQUAL                                                  &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
+&trans &kp GRAVE &kp N1 &kp N2 &kp N3 &kp BSLH                                                   &none  &none     &none     &kp RALT &none       &trans
+                        &trans &kp DOT &kp N0 &kp MINUS                      &none &trans &none &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        mir_sym_layer {
+            display-name = "Sym";
+            bindings = <
+&trans &trans    &trans   &trans    &trans    &trans                                             &trans &trans    &trans    &trans   &trans      &trans
+&trans &kp LBRC  &kp AMPS &kp ASTRK &kp LPAR  &kp RBRC                                           &none  &none     &none     &none    &bootloader &trans
+&trans &kp COLON &kp DLLR &kp PRCNT &kp CARET &kp PLUS                                           &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
+&trans &kp TILDE &kp EXCL &kp AT    &kp HASH  &kp PIPE                                           &none  &none     &none     &kp RALT &none       &trans
+                          &trans &kp LPAR &kp RPAR &kp UNDER                 &trans &none &none &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        mir_fun_layer {
+            display-name = "Fun";
+            bindings = <
+&trans &trans   &trans &trans &trans &trans                                                      &trans &trans    &trans    &trans   &trans      &trans
+&trans &kp F12  &kp F7 &kp F8 &kp F9 &kp PSCRN                                                   &none  &none     &none     &none    &bootloader &trans
+&trans &kp F11  &kp F4 &kp F5 &kp F6 &kp SLCK                                                    &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
+&trans &kp F10  &kp F1 &kp F2 &kp F3 &kp PAUSE_BREAK                                             &none  &none     &none     &kp RALT &none       &trans
+                       &trans &kp K_APP &kp SPACE &kp TAB                    &none &none &trans &trans
+&trans &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
+        };
+
+        // ------------------------------------------------------------------
+        // Shared
+        // ------------------------------------------------------------------
 
         bt_layer {
             display-name = "BT";
