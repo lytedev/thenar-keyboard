@@ -237,8 +237,9 @@ bootloader's serial DFU channel instead — it only needs `dialout`
 group. Convert the UF2 to hex + DFU zip and flash via `/dev/ttyACM0`:
 
 ```bash
-# uf2 -> Intel HEX (script in the repo scratchpad history; UF2 blocks
-# are self-addressed, app range starts at 0x26000)
+# uf2 -> Intel HEX (UF2 blocks are self-addressed; app range starts at
+# 0x26000). Converter lives in the repo: thenar/scripts/uf2_to_hex.py
+python3 thenar/scripts/uf2_to_hex.py zmk_left.uf2 zmk_left.hex
 adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application zmk_left.hex dfu.zip
 adafruit-nrfutil dfu serial --package dfu.zip -p /dev/ttyACM0 -b 115200
 ```

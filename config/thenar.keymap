@@ -209,9 +209,12 @@
         };
 
         // VIA layer 2 (held on the Lower thumb, 50): F-row over shifted
-        // symbols, _ + { } | and < > ? on the right hand. While held,
-        // Adjust is on SPACE (49) - VIA's left-space binding - and on
-        // Config (51) - VIA's right-MO binding.
+        // symbols, _ + { } | and < > ? on the right hand. The thumb keys
+        // are transparent so Config (51) and the right Config (54) fall
+        // through to their base &mo L_RAISE - holding Lower + either
+        // Config lets conditional_layers raise Adjust/Nav (no manual
+        // &mo L_ADJ overlay, which used to make the tri-layer order- and
+        // half-dependent).
         lower_layer {
             display-name = "Lower";
             bindings = <
@@ -219,18 +222,20 @@
 &kp TILDE &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR  &kp BSPC
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp UNDER &kp PLUS  &kp LBRC &kp RBRC  &kp PIPE
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &trans    &kp LT    &kp GT   &kp QMARK &trans
-                                 &trans &mo L_ADJ &trans &mo L_ADJ                &trans &trans &trans &trans
+                                 &trans &trans    &trans &trans                   &trans &trans &trans &trans
 &trans &trans
             >;
 
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
-        // "Config" = VIA layer 3 (held on the left inner thumb, 51):
-        // shifted symbols over the number row, - = [ ] \ on the right,
-        // INS on M. While held: LALT on SPACE (49, VIA's left-space
-        // binding), Adjust on Lower (50, VIA's left-MO binding), and the
-        // encoder presses toggle the Miryoku scheme ON.
+        // "Config" = VIA layer 3 (held on the left inner thumb 51, or the
+        // right inner thumb 54): shifted symbols over the number row,
+        // - = [ ] \ on the right, INS on M. While held: LALT on SPACE
+        // (49, VIA's left-space binding). The Lower thumb (50) is
+        // transparent, falling through to base &mo L_LOWER so holding
+        // Config + Lower lets conditional_layers raise Adjust/Nav. The
+        // right encoder press toggles the Miryoku scheme ON.
         raise_layer {
             display-name = "Config";
             bindings = <
@@ -238,7 +243,7 @@
 &kp GRAVE &kp N1   &kp N2 &kp N3   &kp N4   &kp N5                                               &kp N6    &kp N7    &kp N8    &kp N9   &kp N0   &kp DEL
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp MINUS &kp EQUAL &kp LBKT &kp RBKT &kp BSLH
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp INS   &trans    &trans   &trans   &trans
-                                 &trans &kp LALT &mo L_ADJ &trans             &trans &trans &trans &trans
+                                 &trans &kp LALT &trans    &trans             &trans &trans &trans &trans
 &trans &to L_MIR
             >;
 
