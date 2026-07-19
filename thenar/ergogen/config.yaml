@@ -461,7 +461,7 @@ pcbs:
           P16: row4
           P10: row5
           P1: P1
-          P0: P0
+          P0: SOFT_OFF   # rev2: slider shorts this to GND for ZMK soft-off
           P2: SDA
           P3: SCL
           P4: CS
@@ -493,20 +493,27 @@ pcbs:
           GND: GND
           CS: CS
       # ===================================================================
-      # THIS IS THE rev1 (rc1) WIRING - frozen at git tag hw-rev1, and it
-      # is BROKEN (see docs/battery-and-power.md). Battery is wired
-      # battery+ -> slider -> the nice!nano RAW pin, NOT its B+ pad. On the
-      # nice!nano v2 the onboard charger AND the VDDH battery-voltage sense
-      # both live on B+/B- - RAW feeds only the regulator - so on rev1
-      # hardware the battery reads a flat ~0% and USB does NOT charge it.
-      # (Footprint limitation: mcu_nice_nano.js exposes only edge pins, no
-      # B+/B- pads, so RAW was the only power-input pad.)
+      # rev2 power wiring (see docs/battery-and-power.md). rev1 (frozen at
+      # git tag hw-rev1) wired battery+ -> slider -> the nice!nano RAW pin,
+      # which broke battery sensing AND USB charging (on the v2 both live on
+      # B+/B-, not RAW). rev2 fixes it:
       #
-      # rev1 boards: rework per the doc (LiPo -> module B+/B-).
-      # rev2 (TODO, evolving on main): add B+/B- solder pads, take battery
-      #   OFF RAW, and move `slider to: RAW` -> `to: P0` so the slider
-      #   becomes a ZMK soft-off / wake GPIO (off but still charges). The
-      #   lines below still reflect rev1 until that change lands.
+      #   - Battery+ (JST through-hole pad) is now net BAT_BPLUS: an
+      #     ISOLATED wire-out point, NOT routed to RAW. The builder solders
+      #     a short wire from this pad up to the socketed module's B+ pad
+      #     (the LiPo sits in the gap right under it). Battery- stays GND -
+      #     the module's B- IS GND, already common, so no wire needed for -.
+      #     This restores sensing + USB charging.
+      #   - The slider is OFF the power rail entirely. It now shorts the
+      #     SOFT_OFF net (nice!nano P0) to GND, i.e. it's a ZMK soft-off /
+      #     wake switch: slide off -> System OFF (~uA, still charging over
+      #     USB), slide on -> wake. (The nice!nano can't hard-cut-and-charge
+      #     - B+ = charger = MCU supply are one node - so soft-off is the
+      #     only way to get 'off but charging'.)
+      #
+      # Firmware: needs CONFIG_ZMK_PM_SOFT_OFF + a soft-off/wakeup GPIO node
+      # on P0 (scaffold in docs/battery-and-power.md, apply after wiring the
+      # slider). After changing these nets, regenerate + re-route the board.
       # ===================================================================
       slider:
         what: slider_reversible
@@ -517,15 +524,38 @@ pcbs:
         params:
           side: F
           reverse: true
-          from: switch_from
-          to: RAW
+          from: SOFT_OFF   # nice!nano P0 (see mcu footprint P0 net)
+          to: GND          # slider shorts P0 -> GND = soft-off trigger
       battery:
         what: battery
         where: mcu
         adjust:
           shift: [-17, 0]
         params:
-          RAW: switch_from
+          # JST + pad, isolated: wire this pad to the module's B+ (silk
+          # label added via the batt_bplus_label text below).
+          RAW: BAT_BPLUS
+      # rev2 silk labels. Positions are approximate (offset from the
+      # battery/slider anchors) - verify/nudge when regenerating, they're
+      # cosmetic and may want repositioning to clear pads/traces.
+      batt_bplus_label:
+        what: text
+        where: mcu
+        adjust:
+          shift: [-17, 9]
+        params:
+          text: "BAT+ wire to NN B+"
+          side: F
+          fontsize: 0.7
+      soft_off_label:
+        what: text
+        where: mcu
+        adjust:
+          shift: [-17.1, -9]
+        params:
+          text: "soft-off"
+          side: F
+          fontsize: 0.7
       reset:
         what: reset
         where: mcu
