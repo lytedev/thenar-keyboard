@@ -492,6 +492,20 @@ pcbs:
           VCC: VCC
           GND: GND
           CS: CS
+      # WARNING (see docs/battery-and-power.md): the battery is wired
+      # battery+ -> slider -> the nice!nano's RAW pin, NOT its B+ pad.
+      # On the nice!nano v2 the onboard charger AND the VDDH battery-
+      # voltage sense both live on B+/B- - RAW feeds only the regulator.
+      # Consequences on v1 hardware:
+      #   - battery level always reads ~0% (VDDH/B+ is unconnected)
+      #   - USB does NOT charge the LiPo (the charger charges B+)
+      # This is a footprint limitation: mcu_nice_nano.js exposes only the
+      # castellated edge pins (RAW/GND/VCC/RST/Pxx), no B+/B- pads, so RAW
+      # was the only power-input pad available. v1 rework: solder the LiPo
+      # straight to the module's B+/B- pads (bypasses this path; loses the
+      # slider cutoff). v2 fix: add B+/B- pads and route battery -> slider
+      # -> B+ (like the hypothenar routes battery -> slider -> VBAT), which
+      # restores both sensing and USB charging with the slider ON.
       slider:
         what: slider_reversible
         where: mcu
