@@ -173,6 +173,41 @@ so P0 is free for this.
       flake check will fail until this is done (placement drifted).
 - [ ] Bench-test soft-off + charge-while-off on a reworked board
 
+### Reroute recipe (two paths)
+
+The rev2 electrical delta is tiny (a couple of traces in one corner), so
+you don't need a full reroute — pick whichever is less work:
+
+**Path A — delta-patch your hand-routed board (recommended).** Open the
+current `thenar/routed/keyboard.kicad_pcb` (your good rev1 hand-route) in
+KiCad and change only these four pad nets:
+
+| Pad | net now | net for rev2 |
+|-----|---------|--------------|
+| battery **+** | `switch_from` | `BAT_BPLUS` (isolated — no trace; it's the B+ wire-out) |
+| slider pad 1  | `switch_from` | `SOFT_OFF` |
+| slider pad 2  | `RAW`         | `GND` |
+| nice!nano **P0** | `P0`       | `SOFT_OFF` |
+
+Then: delete the `switch_from` traces (battery+↔slider) and the
+slider→RAW trace; route one short trace slider pad1 → P0 (`SOFT_OFF`);
+let slider pad2 tie to `GND` (via the ground zone, maybe a stub); add the
+two silk labels; DRC. ~99% of the hand-routing is untouched.
+
+*(Scriptable via `pcbnew` but not done here — the edit can't be visually
+verified from a headless session and the delta is small enough that
+doing it in-GUI, where you see + DRC it, is safer.)*
+
+**Path B — full autoroute (fallback).** `nix build .#routed-auto`
+(~25 min, ~95%) machine-routes the whole board from the rev2 scaffold;
+finish the last ~5% + DRC in KiCad. Downside: throws away the rev1
+hand-routing, so you re-verify everything. A fresh build already sits at
+`/tmp/thenar-routed-rev2/keyboard.kicad_pcb` (gc-rooted) if useful as a
+reference — note `BAT_BPLUS` is intentionally a single-pad net (no trace).
+
+Either path lands in `thenar/routed/keyboard.kicad_pcb`; commit the
+finished board and the `routing-check` goes green again.
+
 ---
 
 ## The hypothenar does NOT have the rev1 problem
