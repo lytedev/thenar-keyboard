@@ -20,6 +20,14 @@ hits:
 The slider being a fast, accessible battery cutoff is why it earns its
 place. This step alone saves most spilled boards.
 
+> **Caveat by revision** (see [battery-and-power.md](battery-and-power.md)):
+> the slider is a true hard cutoff only on **rev1 as-fabricated** (battery
+> → slider → RAW). After the rev1 battery rework (LiPo → B+/B-) the slider
+> goes dead, and on **rev2** it becomes a soft-off GPIO (~µA, not a hard
+> disconnect). So on a reworked/rev2 board, "cut power fast" means the
+> soft-off switch, which is slightly weaker for spills — pull the USB and
+> physically disconnect the LiPo if you want a true kill.
+
 ## 2. Case drain slots (free, in case v2)
 
 `thenar/scripts/case.scad` puts drain slots in the floor so liquid that

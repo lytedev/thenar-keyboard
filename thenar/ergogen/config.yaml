@@ -492,20 +492,22 @@ pcbs:
           VCC: VCC
           GND: GND
           CS: CS
-      # WARNING (see docs/battery-and-power.md): the battery is wired
-      # battery+ -> slider -> the nice!nano's RAW pin, NOT its B+ pad.
-      # On the nice!nano v2 the onboard charger AND the VDDH battery-
-      # voltage sense both live on B+/B- - RAW feeds only the regulator.
-      # Consequences on v1 hardware:
-      #   - battery level always reads ~0% (VDDH/B+ is unconnected)
-      #   - USB does NOT charge the LiPo (the charger charges B+)
-      # This is a footprint limitation: mcu_nice_nano.js exposes only the
-      # castellated edge pins (RAW/GND/VCC/RST/Pxx), no B+/B- pads, so RAW
-      # was the only power-input pad available. v1 rework: solder the LiPo
-      # straight to the module's B+/B- pads (bypasses this path; loses the
-      # slider cutoff). v2 fix: add B+/B- pads and route battery -> slider
-      # -> B+ (like the hypothenar routes battery -> slider -> VBAT), which
-      # restores both sensing and USB charging with the slider ON.
+      # ===================================================================
+      # THIS IS THE rev1 (rc1) WIRING - frozen at git tag hw-rev1, and it
+      # is BROKEN (see docs/battery-and-power.md). Battery is wired
+      # battery+ -> slider -> the nice!nano RAW pin, NOT its B+ pad. On the
+      # nice!nano v2 the onboard charger AND the VDDH battery-voltage sense
+      # both live on B+/B- - RAW feeds only the regulator - so on rev1
+      # hardware the battery reads a flat ~0% and USB does NOT charge it.
+      # (Footprint limitation: mcu_nice_nano.js exposes only edge pins, no
+      # B+/B- pads, so RAW was the only power-input pad.)
+      #
+      # rev1 boards: rework per the doc (LiPo -> module B+/B-).
+      # rev2 (TODO, evolving on main): add B+/B- solder pads, take battery
+      #   OFF RAW, and move `slider to: RAW` -> `to: P0` so the slider
+      #   becomes a ZMK soft-off / wake GPIO (off but still charges). The
+      #   lines below still reflect rev1 until that change lands.
+      # ===================================================================
       slider:
         what: slider_reversible
         where: mcu
