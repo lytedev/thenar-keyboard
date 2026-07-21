@@ -156,7 +156,11 @@
           # layers with slowed outer walls - the "15" cutout was the
           # right fit (tight, no warping). Set to 0 for a CAD-true STL
           # (e.g. if compensating in the slicer instead - don't do both).
-          switchplateCompensation = "0.15";
+          # Bumped 0.15 -> 0.25 (2026-07): at 0.15 the printed plate's Choc
+          # clip cutouts came out VERY tight on the first real print. This
+          # grows every interior cutout 0.1mm more per side. Tune here if
+          # the next print is loose.
+          switchplateCompensation = "0.25";
 
           # 3D-printable switch mid-plate. Extrudes the ergogen `switchplate`
           # outline (14mm Choc cutouts + scrollwheel cutout baked in) to
