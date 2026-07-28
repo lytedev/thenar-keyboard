@@ -31,7 +31,7 @@ nix run .#flash -- left          # build + flash (double-tap reset when prompted
 nix run .#flash -- right
 ```
 
-The shield definition + default keymap live in [`config/`](./config/).
+The shield definition + keymap live in [`config/`](./config/).
 See `config/README.md` for the full firmware development workflow,
 including hash-pinning the Zephyr SDK on first build.
 

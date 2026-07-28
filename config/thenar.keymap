@@ -12,19 +12,20 @@
 //      layout - the VIA config iris_ce_rev__1.layout.json from
 //      https://git.lyte.dev/lytedev/keyboards/src/branch/master/iris-ce
 //      (per its readme, VIA is the source of truth; keymap.c is older).
-//      VIA layers 0/2/3/4 map to Base/Lower/Raise/Adjust here. VIA
+//      VIA layers 0/2/3/4 map to Base/Left/Right/Both here. VIA
 //      layer 1 (a plain-ESC/TAB/LCTRL "gaming" overlay only reachable
 //      through QMK DF() keys) is not ported.
-//   2. Miryoku scheme (layers 4-10): the Miryoku reference layers
+//   2. Miryoku scheme (layers 4-11): the Miryoku reference layers
 //      (https://github.com/manna-harbour/miryoku) for learning.
 //
 // Miryoku enter / variant-swap / exit:
 //
-//   ENTER : hold Config (left inner thumb, pos 51) and click the RIGHT
-//           encoder - the Config-layer right-encoder press is &to L_MIR,
-//           landing on the Colemak-DH Miryoku base. Gated behind Config
-//           so a stray encoder click during normal typing can't flip the
-//           layout. (A bare right-encoder click on base is just K_MUTE.)
+//   ENTER : hold the Right layer (right thumb, pos 53) and click the
+//           RIGHT encoder - that layer's right-encoder press is
+//           &to L_MIR, landing on the Colemak-DH Miryoku base. Gated
+//           behind a layer hold so a stray encoder click during normal
+//           typing can't flip the layout. (A bare right-encoder click
+//           on base is just K_MUTE.)
 //   SWAP  : within Miryoku, swap the alpha variant by holding the Media
 //           thumb (now pos 48, the OUTER left thumb after the thumb-
 //           cluster shift) and DOUBLE-tapping a RIGHT-hand top-row key
@@ -35,10 +36,11 @@
 //   EXIT  : click the RIGHT encoder from any Miryoku layer (it is
 //           &to L_BASE there), or Media-thumb + double-tap pos-18 (Y).
 //
-// The BT layer (11) sits on top of everything and is reachable from both
-// schemes: Iris via Adjust position 11 (&mo, top-right), Miryoku via the
-// Media layer (hold the ESC/Media thumb at pos 48, then the right-home
-// inner key), which also carries Miryoku's own &bt profile keys.
+// Radio control (BT profiles, output select, reset, bootloader) used to
+// be a separate BT layer reached by a third &mo hop. It now lives
+// directly on the Both layer's number row and bottom row.
+// Miryoku reaches the same functions from its own Media layer, which
+// carries &bt profile keys, &out OUT_TOG and &bt BT_CLR.
 //
 // Position layout (58 positions, left half then right half, top-to-bottom):
 //
@@ -56,26 +58,42 @@
 // Thumb arcs, per Daniel's spec (Iris halves are 4x6 + 1 inner extra +
 // 3 thumbs; thenar halves are 4x6 + 2 mods + 2 thumbs + encoder press):
 //
-//   left,  outer->inner (48 49 50 51): LGUI  SPACE  MO(Lower)  MO(Config)
-//   right, positions   (52 53 54 55): LALT SPACE MO(Config) RET
-//     (physical left->right on the right half reads 55 54 53 52 =
-//      RET MO(Config) SPACE LALT, mirroring the left half - confirmed
-//      against Daniel's on-hardware observation, not assumed. Backspace
-//      lives on the top-row corners; the freed thumb holds Config/Raise.)
+//   left,  outer->inner (48 49 50 51): LGUI  SPACE  MO(Left)  LALT
+//   right, inner->outer (52 53 54 55): RET   MO(Right)  SPACE  LALT
+//     ("outer" = furthest from the board's centre. BOTH halves are
+//      written physical-left-to-right, same as the grid rows - so on the
+//      right half position 52 is the INNERMOST thumb and 55 the
+//      outermost. Confirmed against Daniel's on-hardware observation,
+//      not assumed. Backspace lives on the top-row corners.)
 //
-// "Config" is the Raise/MO(3) layer of his VIA config. It lives ONLY on
-// the left inner thumb (51); the right inner thumb is Enter with
-// Backspace beside it (Daniel: "config thumb button to be enter on the
-// right and enter to be backspace").
+//      Each hand gets exactly one LALT (51 left, 55 right) and one SPACE
+//      (49 left, 54 right). The two layer-holds are one per hand -
+//      Left on 50, Right on 53 - so the Both layer is always a
+//      two-handed chord, unreachable by either thumb alone.
+//
+//      Until 2026-07 the matrix transform listed the right half's mod
+//      row descending (RC(4,10)..RC(4,7)), so positions 52-55 ran
+//      right-to-left while every other row ran left-to-right, and each
+//      thumb line had to be read mirrored. The transform is now
+//      ascending on both halves and the right-hand thumb groups were
+//      reversed to match; key behavior is byte-for-byte unchanged.
+//
+// The Right layer (VIA's "Config"/MO(3)) is held by ONE key: pos 53, the
+// right thumb. The left inner thumb (51) is the LALT modifier, mirroring
+// LALT on the right outer thumb (55) - one Alt per hand. So reaching the
+// Both layer is necessarily two-handed: 50 + 53. The right INNERMOST
+// thumb (52) is Enter, with Backspace on the top-row corners (Daniel:
+// "config thumb button to be enter on the right and enter to be
+// backspace").
 //
 // Compromises:
 //   - HOME and END (the Iris inner row-4 extras) leave base entirely;
-//     they live on Adjust positions 54/55 instead.
+//     they live on the Both layer's right bottom row (positions 42/45).
 //   - Iris ESC_CTL (LCTL_T(KC_ESC)) becomes &mt LCTRL ESC. QMK's
 //     PERMISSIVE_HOLD is approximated by ZMK's default hold-tap timing.
 //   - VIA's Adjust layer is a nearly-empty overlay (plain ESC/TAB/LCTRL
-//     on the left outer column). Ported as-is, with documented additions
-//     on transparent slots: &mo BT on 11, HOME/END on 54/55.
+//     on the left outer column). Ported with documented additions on
+//     its free slots: the radio row and HOME/PGDN/PGUP/END.
 //
 // Miryoku notes:
 //
@@ -86,11 +104,18 @@
 //     (mir_qwerty, L_MQWY), swapped via the Media-layer base-swap keys
 //     above. Both carry GACS home-row mods (GUI/Alt/Ctrl/Shift,
 //     outer->inner) and RALT on the bottom-row X and DOT.
-//   - Miryoku's 3 thumb keys per hand occupy the OUTER three thumb
-//     positions so Nav/SPACE (49) shares the physical key with Iris
-//     SPACE: left 48/49/50 = ESC(Media)/SPC(Nav)/TAB(Mouse), right
-//     53/54/55 = RET(Sym)/BSPC(Num)/DEL(Fun). The innermost thumbs
-//     (51 left, 52 right) are unused in Miryoku.
+//   - Miryoku's 3 thumb keys per hand. Left 48/49/50 (outer->inner) =
+//     ESC(Media)/SPC(Nav)/TAB(Mouse), so Nav/SPACE (49) shares the
+//     physical key with Iris SPACE. Right 52/53/54 (inner->outer) =
+//     DEL(Fun)/BSPC(Num)/RET(Sym). Unused: 51 (left innermost) and
+//     55 (right outermost).
+//
+//     NOTE the asymmetry: the left hand leaves its INNERMOST thumb free
+//     while the right hand leaves its OUTERMOST one free, so the two
+//     clusters are not mirror images. This is preserved as-is from the
+//     layout that was verified working on hardware - it is a layout
+//     question, not the transform bug fixed above. Revisit only if the
+//     right thumb reach actually feels wrong in use.
 //   - Base-swap keys ARE implemented (Media top row, see above).
 //     Miryoku's Button layer is omitted; clipboard keys use Ctrl-combos
 //     (LC(Z) etc.) instead of AC_* usages for better OS compatibility.
@@ -98,7 +123,7 @@
 //
 // Encoders:
 //   rotation: left = volume everywhere; right = PgDn/PgUp on Base
-//             (volume on the other layers; prev/next on BT).
+//             (volume on every other layer).
 //   press   : left (56) = K_MUTE everywhere. Right (57) is the Miryoku
 //             toggle: on the Iris base it is &to L_MIR (enter Miryoku
 //             at Colemak-DH); on every Miryoku layer it is &to L_BASE
@@ -110,19 +135,30 @@
 // uses - it OVERRIDES boards/shields/thenar/thenar.keymap per ZMK's
 // user-config convention. Edit here, not there.
 
-#define L_BASE  0
-#define L_LOWER 1
-#define L_RAISE 2
-#define L_ADJ   3
-#define L_MIR   4
-#define L_MNAV  5
-#define L_MMOU  6
-#define L_MMED  7
-#define L_MNUM  8
-#define L_MSYM  9
-#define L_MFUN  10
-#define L_BT    11
-#define L_MQWY  12
+// LAYER INDICES MUST MATCH THE ORDER OF THE CHILD NODES UNDER keymap {}.
+// ZMK numbers layers by node order, not by these names ("Layers are
+// numbered in the order that they appear in keymap node" -
+// https://zmk.dev/docs/keymaps). Adding a layer in the middle silently
+// renumbers everything after it. If you insert one, renumber here and
+// re-check with the node-order listing at the bottom of this file.
+//
+// The first three overlays are named for WHICH THUMB HOLDS THEM, not for
+// what is on them - keys get stuffed wherever they fit, so any semantic
+// name (Lower/Raise/Adjust/Config/Nav) would go stale immediately. These
+// deliberately avoid the word "alt": LALT is a real modifier sitting on
+// the thumb keys right next to these holds.
+#define L_BASE  0   // base_layer
+#define L_LEFT  1   // left_layer   - held with the LEFT thumb (50)
+#define L_RIGHT 2   // right_layer  - held with the RIGHT thumb (53)
+#define L_BOTH  3   // both_layer   - both of the above (conditional layer)
+#define L_MIR   4   // mir_base_layer
+#define L_MQWY  5   // mir_qwerty_layer
+#define L_MNAV  6   // mir_nav_layer
+#define L_MMOU  7   // mir_mouse_layer
+#define L_MMED  8   // mir_media_layer
+#define L_MNUM  9   // mir_num_layer
+#define L_MSYM  10  // mir_sym_layer
+#define L_MFUN  11  // mir_fun_layer
 
 / {
     behaviors {
@@ -173,14 +209,15 @@
         };
     };
 
-    // Tri-layer: holding BOTH Lower and Config(Raise) activates the
-    // Adjust layer (nav/arrows), the QMK "adjust layer" pattern. Natural
-    // chord: left-thumb Lower (50) + right-thumb Config (54).
+    // Holding BOTH alt thumbs activates Both (nav/arrows/radio), the
+    // QMK "adjust layer" pattern. Natural chord: left-thumb Left (50)
+    // + right-thumb Right (53). Left has no second key, so that
+    // chord is the only way in.
     conditional_layers {
         compatible = "zmk,conditional-layers";
         tri_layer {
-            if-layers = <L_LOWER L_RAISE>;
-            then-layer = <L_ADJ>;
+            if-layers = <L_LEFT L_RIGHT>;
+            then-layer = <L_BOTH>;
         };
     };
 
@@ -198,7 +235,7 @@
 &kp TAB        &kp Q  &kp W  &kp E  &kp R  &kp T                                                 &kp Y  &kp U  &kp I     &kp O   &kp P    &kp BSPC
 &mt LCTRL ESC  &kp A  &kp S  &kp D  &kp F  &kp G                                                 &kp H  &kp J  &kp K     &kp L   &kp SEMI &kp SQT
 &kp LSHFT      &kp Z  &kp X  &kp C  &kp V  &kp B                                                 &kp N  &kp M  &kp COMMA &kp DOT &kp FSLH &kp RET
-                             &kp LGUI &kp SPACE &mo L_LOWER &mo L_RAISE          &kp LALT &kp SPACE &mo L_RAISE &kp RET
+                             &kp LGUI &kp SPACE &mo L_LEFT &kp LALT             &kp RET &mo L_RIGHT &kp SPACE &kp LALT
 &kp K_MUTE &kp K_MUTE
             >;
 
@@ -208,15 +245,15 @@
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp PG_DN PG_UP>;
         };
 
-        // VIA layer 2 (held on the Lower thumb, 50): F-row over shifted
+        // VIA layer 2 (held on the Left thumb, 50): F-row over shifted
         // symbols, _ + { } | and < > ? on the right hand. The thumb keys
-        // are transparent so Config (51) and the right Config (54) fall
-        // through to their base &mo L_RAISE - holding Lower + either
-        // Config lets conditional_layers raise Adjust/Nav (no manual
-        // &mo L_ADJ overlay, which used to make the tri-layer order- and
+        // are transparent so Right (53) falls through to its base
+        // &mo L_RIGHT - holding Left + Right lets
+        // conditional_layers raise Both (no manual
+        // &mo L_BOTH overlay, which used to make the tri-layer order- and
         // half-dependent).
-        lower_layer {
-            display-name = "Lower";
+        left_layer {
+            display-name = "Left";
             bindings = <
 &kp F1    &kp F2   &kp F3 &kp F4   &kp F5   &kp F6                                               &kp F7    &kp F8    &kp F9    &kp F10  &kp F11   &kp F12
 &kp TILDE &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR  &kp BSPC
@@ -229,17 +266,17 @@
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
-        // "Config" = VIA layer 3 (held on the left inner thumb 51, or the
-        // right inner thumb 54): shifted symbols over the number row,
+        // Right = VIA layer 3 (held on the right thumb, 53):
+        // shifted symbols over the number row,
         // - = [ ] \ on the right, INS on M. While held: LALT on SPACE
-        // (49, VIA's left-space binding). The Lower thumb (50) is
-        // transparent, falling through to base &mo L_LOWER so holding
-        // Config + Lower lets conditional_layers raise Adjust/Nav. The
+        // (49, VIA's left-space binding). The Left thumb (50) is
+        // transparent, falling through to base &mo L_LEFT so holding
+        // Right + Left raises Both too. The
         // right encoder press toggles the Miryoku scheme ON.
-        raise_layer {
-            display-name = "Config";
+        right_layer {
+            display-name = "Right";
             bindings = <
-&kp ESC   &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp BSPC
+&kp ESC   &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT                                            &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp DEL
 &kp GRAVE &kp N1   &kp N2 &kp N3   &kp N4   &kp N5                                               &kp N6    &kp N7    &kp N8    &kp N9   &kp N0   &kp DEL
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp MINUS &kp EQUAL &kp LBKT &kp RBKT &kp BSLH
 &trans    &trans   &trans &trans   &trans   &trans                                               &trans    &kp INS   &trans    &trans   &trans   &trans
@@ -250,25 +287,36 @@
             sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_VOL_DN C_VOL_UP>;
         };
 
-        // VIA layer 4 (Lower+Config): the live config keeps this nearly
-        // empty - just plain ESC/TAB/LCTRL on the left outer column
-        // (un-mod-tapped variants of the base column). Additions on
-        // transparent slots: &mo BT on 11 (BT layer access for the Iris
-        // scheme) and HOME/END on 54/55 (the Iris inner-extras displaced
-        // from base by the new thumb-arc spec).
-        adjust_layer {
-            display-name = "Nav";
+        // VIA layer 4 (Left+Right): the live config keeps this
+        // nearly empty - just plain ESC/TAB/LCTRL on the left outer
+        // column (un-mod-tapped variants of the base column). Additions
+        // on its free slots: the radio row (absorbed from the old BT
+        // layer) and HOME/PGDN/PGUP/END on the right bottom row.
+        both_layer {
+            display-name = "Both";
             // Faithful port of the Iris CE [LA] layer (his tri-layer,
-            // reached by holding Lower+Config): mouse + wheel on the left,
-            // arrows on the right home row (HJKL), HOME/PGDN/PGUP/END on
-            // the right bottom row, media on the right top row.
+            // reached by holding BOTH thumb alt keys): mouse + wheel on
+            // the left, arrows on the right home row (HJKL),
+            // HOME/PGDN/PGUP/END on the right bottom row, media on the
+            // right top row.
             // KC_ACL0-2 (mouse accel) have no ZMK equivalent -> &none.
-            // &mo L_BT kept on pos 11 for BT-layer access (Iris scheme).
+            //
+            // The old separate BT layer folded into here (2026-07): its
+            // radio keys were the only thing on it, they all landed on
+            // slots that were &none/&trans here, and reaching it needed a
+            // third hop through &mo. Number row is now the radio row -
+            // BT_CLR then profiles 0-4, matching the old BT layer's own
+            // placement. Output select sits under it on the bottom row.
+            //
+            // &sys_reset and &bootloader are deliberately parked on the
+            // two far bottom corners: they are one hop closer than they
+            // used to be, so they want positions no finger visits by
+            // accident.
             bindings = <
-&trans    &none      &none        &none      &trans        &trans                                &trans &trans   &trans   &trans   &trans    &mo L_BT
+&bt BT_CLR   &bt BT_SEL 0   &bt BT_SEL 1   &bt BT_SEL 2    &bt BT_SEL 3   &bt BT_SEL 4          &trans &trans   &trans   &trans   &trans    &trans
 &trans    &mkp LCLK  &mmv MOVE_UP &mkp RCLK  &msc SCRL_UP  &trans                                &kp C_PREV &kp C_VOL_DN &kp C_PP &kp C_VOL_UP &kp C_NEXT &trans
 &trans    &mmv MOVE_LEFT &mmv MOVE_DOWN &mmv MOVE_RIGHT &msc SCRL_DOWN &trans                    &kp LEFT &kp DOWN &kp UP   &kp RIGHT &trans   &trans
-&trans    &trans     &trans       &trans     &trans        &trans                                &kp HOME &kp PG_DN &kp PG_UP &kp END  &trans   &trans
+&out OUT_USB &out OUT_BLE &out OUT_TOG &trans  &trans      &sys_reset                            &kp HOME &kp PG_DN &kp PG_UP &kp END  &trans   &bootloader
                         &trans &trans &trans &trans                           &trans &trans &trans &trans
 &trans &trans
             >;
@@ -289,7 +337,7 @@
 &none &kp Q        &kp W        &kp F         &kp P         &kp B                                &kp J  &kp L         &kp U         &kp Y        &kp SQT      &none
 &none &hm LGUI A   &hm LALT R   &hm LCTRL S   &hm LSHFT T   &kp G                                &kp M  &hm LSHFT N   &hm LCTRL E   &hm LALT I   &hm LGUI O   &none
 &none &kp Z        &hm RALT X   &kp C         &kp D         &kp V                                &kp K  &kp H         &kp COMMA     &hm RALT DOT &kp FSLH     &none
-                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &none &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL
+                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &tl L_MFUN DEL &tl L_MNUM BSPC &tl L_MSYM RET &none
 &kp K_MUTE &to L_BASE
             >;
 
@@ -311,7 +359,7 @@
 &none &kp Q        &kp W        &kp E         &kp R         &kp T                                &kp Y  &kp U         &kp I         &kp O        &kp P        &none
 &none &hm LGUI A   &hm LALT S   &hm LCTRL D   &hm LSHFT F   &kp G                                &kp H  &hm LSHFT J   &hm LCTRL K   &hm LALT L   &hm LGUI SEMI &none
 &none &kp Z        &hm RALT X   &kp C         &kp V         &kp B                                &kp N  &kp M         &kp COMMA     &hm RALT DOT &kp FSLH     &none
-                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &none &tl L_MSYM RET &tl L_MNUM BSPC &tl L_MFUN DEL
+                   &tl L_MMED ESC &tl L_MNAV SPACE &tl L_MMOU TAB &none          &tl L_MFUN DEL &tl L_MNUM BSPC &tl L_MSYM RET &none
 &kp K_MUTE &to L_BASE
             >;
 
@@ -325,7 +373,7 @@
 &trans &bootloader &none     &none     &none     &none                                           &kp LC(Y)  &kp LC(V) &kp LC(C)  &kp LC(X) &kp LC(Z)  &trans
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &caps_word &kp LEFT  &kp DOWN   &kp UP    &kp RIGHT  &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &kp INS    &kp HOME  &kp PG_DN  &kp PG_UP &kp END    &trans
-                             &none &trans &none &trans                       &trans &kp RET &kp BSPC &kp DEL
+                             &none &trans &none &trans                       &kp DEL &kp BSPC &kp RET &trans
 &kp K_MUTE &to L_BASE
             >;
 
@@ -340,7 +388,7 @@
 &trans &bootloader &none     &none     &none     &none                                           &kp LC(Y) &kp LC(V)       &kp LC(C)       &kp LC(X)     &kp LC(Z)       &trans
 &trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &none     &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_UP  &mmv MOVE_RIGHT &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &none     &msc SCRL_LEFT  &msc SCRL_DOWN  &msc SCRL_UP  &msc SCRL_RIGHT &trans
-                             &none &none &trans &trans                       &trans &mkp RCLK &mkp LCLK &mkp MCLK
+                             &none &none &trans &trans                       &mkp MCLK &mkp LCLK &mkp RCLK &trans
 &kp K_MUTE &to L_BASE
             >;
 
@@ -356,9 +404,9 @@
             bindings = <
 &trans &trans      &trans    &trans    &trans    &trans                                          &u_td_iris   &u_td_colemak &u_td_qwerty  &trans        &trans       &trans
 &trans &bootloader &none     &none     &none     &none                                           &none        &none         &none         &none         &none        &trans
-&trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &mo L_BT     &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT   &trans
+&trans &kp LGUI    &kp LALT  &kp LCTRL &kp LSHFT &none                                           &bt BT_CLR     &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT   &trans
 &trans &none       &kp RALT  &none     &none     &none                                           &out OUT_TOG &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3 &trans
-                             &trans &none &none &trans                       &trans &kp C_STOP &kp C_PP &kp C_MUTE
+                             &trans &none &none &trans                       &kp C_MUTE &kp C_PP &kp C_STOP &trans
 &kp K_MUTE &to L_BASE
             >;
 
@@ -372,7 +420,7 @@
 &trans &kp LBKT  &kp N7 &kp N8 &kp N9 &kp RBKT                                                   &none  &none     &none     &none    &bootloader &trans
 &trans &kp SEMI  &kp N4 &kp N5 &kp N6 &kp EQUAL                                                  &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
 &trans &kp GRAVE &kp N1 &kp N2 &kp N3 &kp BSLH                                                   &none  &none     &none     &kp RALT &none       &trans
-                        &kp DOT &kp N0 &kp MINUS &trans                      &trans &none &trans &none
+                        &kp DOT &kp N0 &kp MINUS &trans                      &none &trans &none &trans
 &kp K_MUTE &to L_BASE
             >;
 
@@ -386,7 +434,7 @@
 &trans &kp LBRC  &kp AMPS &kp ASTRK &kp LPAR  &kp RBRC                                           &none  &none     &none     &none    &bootloader &trans
 &trans &kp COLON &kp DLLR &kp PRCNT &kp CARET &kp PLUS                                           &none  &kp LSHFT &kp LCTRL &kp LALT &kp LGUI    &trans
 &trans &kp TILDE &kp EXCL &kp AT    &kp HASH  &kp PIPE                                           &none  &none     &none     &kp RALT &none       &trans
-                          &kp LPAR &kp RPAR &kp UNDER &trans                 &trans &trans &none &none
+                          &kp LPAR &kp RPAR &kp UNDER &trans                 &none &none &trans &trans
 &kp K_MUTE &to L_BASE
             >;
 
@@ -411,18 +459,5 @@
         // Shared
         // ------------------------------------------------------------------
 
-        bt_layer {
-            display-name = "BT";
-            bindings = <
-&bt BT_CLR  &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4                                                            &trans      &trans      &trans      &trans      &trans      &trans
-&trans      &trans       &trans       &trans       &trans       &trans                                                                  &trans      &trans      &trans      &trans      &trans      &trans
-&trans      &trans       &trans       &trans       &trans       &trans                                                                  &trans      &kp LEFT    &kp DOWN    &kp UP      &kp RIGHT   &trans
-&out OUT_USB &out OUT_BLE &trans      &trans       &trans       &sys_reset                                                              &sys_reset  &trans      &trans      &trans      &trans      &bootloader
-                                                   &trans       &trans       &trans      &trans       &trans      &trans                &trans      &trans
-&trans &trans
-            >;
-
-            sensor-bindings = <&inc_dec_kp C_VOL_DN C_VOL_UP &inc_dec_kp C_PREV C_NEXT>;
-        };
     };
 };

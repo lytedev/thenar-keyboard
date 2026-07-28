@@ -30,14 +30,13 @@ hermetic.
   directory's `boards/` for shield discovery.
 - `build.yaml` — ZMK CI matrix (for GitHub Actions / similar). Not used
   by the local nix build, but useful if you want to add CI later.
-- `thenar.keymap` — the default keymap zmk-nix's `buildSplitKeyboard`
-  picks up. Edit for personal tweaks.
+- `thenar.keymap` — the keymap zmk-nix's `buildSplitKeyboard` picks up.
+  The only keymap in the repo; edit here.
 - `boards/shields/thenar/`
   - `Kconfig.shield` / `Kconfig.defconfig` — Kconfig entries for the shield.
   - `thenar.dtsi` — matrix transform, encoder, sensor declarations.
   - `thenar-layouts.dtsi` — physical key positions (for ZMK Studio).
   - `thenar_left.overlay` / `thenar_right.overlay` — per-half GPIO + SPI.
-  - `thenar.keymap` — fallback keymap built into the shield definition.
 
 ## Hardware specifics
 

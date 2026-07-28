@@ -246,11 +246,13 @@ adafruit-nrfutil dfu serial --package dfu.zip -p /dev/ttyACM0 -b 115200
 
 ### Firmware troubleshooting notes (hard-won)
 
-- **`config/thenar.keymap` overrides the shield keymap.** Per ZMK's
-  config-folder convention, `config/<name>.keymap` and
-  `config/<name>.conf` take precedence over the copies under
-  `config/boards/shields/thenar/`. Edit the top-level ones; the build
-  log line `Using keymap file: ...` tells you which file actually won.
+- **`config/thenar.keymap` is the keymap.** Per ZMK's config-folder
+  convention, `config/<name>.keymap` and `config/<name>.conf` take
+  precedence over any copies under `config/boards/shields/thenar/`.
+  The shield used to carry a stub fallback keymap that silently rotted
+  out of sync with the matrix transform; it is gone, and the top-level
+  file is now the only one. The build log line `Using keymap file: ...`
+  confirms which file won.
 - **ZMK is pinned to a release tag in `config/west.yml` — keep it
   that way.** A `main` snapshot once built a 50 KB image with no USB
   interfaces and no BLE: the board enumerated but no key could ever

@@ -1,6 +1,5 @@
 # nix build symlinks
-result
-result-*
+result*
 
 # KiCad project-local history (auto-created by the launcher)
 .history/
