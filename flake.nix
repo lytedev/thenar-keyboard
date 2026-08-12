@@ -361,7 +361,7 @@
           # zmk-nix's generic flash helper because we want left/right args.
           flash = pkgs.writeShellApplication {
             name = "flash";
-            runtimeInputs = [ pkgs.util-linux pkgs.coreutils ];
+            runtimeInputs = [ pkgs.util-linux pkgs.coreutils pkgs.udisks ];
             text = ''
               set -euo pipefail
               if [ "$#" -ne 1 ] || ! [[ "$1" =~ ^(left|right)$ ]]; then
@@ -377,11 +377,33 @@
               echo "[flash] firmware ready: $uf2"
               echo "[flash] double-tap reset on the $part-hand Nice!Nano now."
               echo "[flash] waiting for NICENANO mass-storage to appear..."
+              # Poll for the raw BLOCK DEVICE, then mount it ourselves.
+              # Waiting on a MOUNTPOINT instead hangs forever on any host
+              # without an automounter: the bootloader enumerates (kernel
+              # logs "Adafruit nRF UF2"), nothing mounts it, the poll never
+              # fires, and it reads as if the double-tap never registered.
+              # Match on MODEL as well as LABEL - the label is absent until
+              # the filesystem is probed.
               while :; do
-                mount=$(lsblk -o LABEL,MOUNTPOINT -nr | awk '$1=="NICENANO" {print $2; exit}')
-                if [ -n "$mount" ]; then break; fi
+                dev=$(lsblk -o NAME,MODEL -nr | awk '$2 ~ /UF2|Adafruit/ {print "/dev/"$1; exit}')
+                if [ -z "$dev" ]; then
+                  dev=$(lsblk -o NAME,LABEL -nr | awk '$2=="NICENANO" {print "/dev/"$1; exit}')
+                fi
+                if [ -n "$dev" ]; then break; fi
                 sleep 1
               done
+              echo "[flash] bootloader at $dev; mounting..."
+              udisksctl mount -b "$dev" >/dev/null 2>&1 || true
+              # Read the mountpoint back from lsblk rather than parsing
+              # udisksctl's message - its wording ("Mounted X at Y", with or
+              # without a trailing period) varies across udisks versions, and
+              # a mis-parse looks exactly like a mount failure.
+              mount=$(lsblk -o NAME,MOUNTPOINT -nr | awk -v d="''${dev#/dev/}" '$1==d {print $2; exit}')
+              if [ -z "$mount" ]; then
+                echo "error: $dev did not mount. If polkit refused, flash over" >&2
+                echo "       serial DFU instead - see docs/build.md." >&2
+                exit 1
+              fi
               echo "[flash] mounted at $mount; copying..."
               cp "$uf2" "$mount/"
               sync

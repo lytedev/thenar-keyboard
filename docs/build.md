@@ -229,8 +229,14 @@ plug-and-play once the hardware is in:
 ## Flashing
 
 `nix run .#flash -- left|right` builds and waits for the `NICENANO`
-mass-storage device (double-tap reset to enter the bootloader), then
-copies the UF2. This needs a machine that can mount USB storage.
+mass-storage device (double-tap reset to enter the bootloader), mounts
+it with `udisksctl`, then copies the UF2. This needs a machine where
+polkit will allow that mount — in practice, a local desktop session.
+
+If it sits at "waiting for NICENANO" while `journalctl -k` shows the
+bootloader enumerating (`Adafruit nRF UF2`, a new `/dev/sdX`), the
+mount is what failed, not the double-tap. Fall back to serial DFU
+below.
 
 **Over SSH** (no desktop session, polkit refuses `udisksctl`): use the
 bootloader's serial DFU channel instead — it only needs `dialout`
